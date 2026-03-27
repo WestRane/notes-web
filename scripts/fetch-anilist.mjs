@@ -68,6 +68,12 @@ async function extractAnilistId(filePath) {
 }
 
 async function main() {
+  const args = process.argv.slice(2)
+  const forceAll = args.includes("--force")
+  const forceIds = args
+    .filter((a) => /^\d+$/.test(a))
+    .map(Number)
+
   let cache = {}
   if (existsSync(CACHE_FILE)) {
     const raw = await readFile(CACHE_FILE, "utf-8")
@@ -85,10 +91,13 @@ async function main() {
 
   console.log(`Found ${ids.size} AniList IDs in content`)
 
-  const newIds = [...ids].filter((id) => !cache[id])
+  const newIds = [...ids].filter((id) => !cache[id] || forceIds.includes(id))
 
   const staleIds = [...ids].filter(
-    (id) => cache[id] && Date.now() - (cache[id].fetchedAt ?? 0) > TTL_MS
+    (id) =>
+      cache[id] &&
+      !forceIds.includes(id) &&
+      (forceAll || Date.now() - (cache[id].fetchedAt ?? 0) > TTL_MS)
   )
 
   const staleWithNull = staleIds
