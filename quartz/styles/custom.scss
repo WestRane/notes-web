@@ -1,3 +1,31 @@
 @use "./base.scss";
 
-// put your custom CSS here!
+// Center images that use Obsidian's syntax (e.g. ![|600])
+// Quartz doesn't parse this natively, so we handle it via CSS
+img[alt^="|"] {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+// Specific width override for |700 images
+img[alt="|700"] {
+  width: 700px;
+}
+
+// Hide Quartz's default folder listing globally
+// since we use NoteList component on all folder index pages
+.page-listing {
+  display: none;
+}
+
+// Remove margin between header and italic paragraph (date support)
+:is(h1, h2, h3, h4, h5, h6):has(+ p > em:only-child) {
+  margin-bottom: 0;
+}
+// Make italic paragraph slightly darker
+:is(h1, h2, h3, h4, h5, h6) + p:has(> em:only-child) {
+  margin-top: 0;
+  opacity: 0.7;
+}
