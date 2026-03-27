@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - v4
+  repository_dispatch:
+      types: [content-updated]      
   workflow_dispatch:
     inputs:
       force:
