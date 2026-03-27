@@ -5,11 +5,12 @@ import * as Component from "./quartz/components"
 export const sharedPageComponents: SharedLayout = {
   head: Component.Head(),
   header: [],
-  afterBody: [],
+  afterBody: [
+    Component.ScoreBlock(),
+  ],
   footer: Component.Footer({
     links: {
-      GitHub: "https://github.com/jackyzha0/quartz",
-      "Discord Community": "https://discord.gg/cRFFHYye7t",
+      AniList: "https://anilist.co/user/EastRane/"
     },
   }),
 }
@@ -21,9 +22,37 @@ export const defaultContentPageLayout: PageLayout = {
       component: Component.Breadcrumbs(),
       condition: (page) => page.fileData.slug !== "index",
     }),
+    Component.BannerImage(),
     Component.ArticleTitle(),
-    Component.ContentMeta(),
+    Component.ConditionalRender({
+      component: Component.ContentMeta(),
+      condition: (page) => page.fileData.slug !== "index",
+    }),
     Component.TagList(),
+    Component.ConditionalRender({
+      component: Component.ReviewLinks(),
+      condition: (page) => page.fileData.slug !== "index",
+    }),
+    Component.SpoilerWarning(),
+    Component.ConditionalRender({
+    component: Component.HomePage({
+      intro: "Notes on things I consume and occasionally break",
+      sections: [
+        {
+          type: "list",
+          title: "Latest reviews",
+          path: "reviews",
+          recursive: true,
+          showCategory: true,
+          limit: 10,
+          allLabel: "All reviews →",
+          heading: "Reviews",
+          description: ["Because my memory is short, but the media list is long..."],
+        }
+      ],
+    }),
+    condition: (page) => page.fileData.slug === "index",
+  }),    
   ],
   left: [
     Component.PageTitle(),
@@ -38,10 +67,13 @@ export const defaultContentPageLayout: PageLayout = {
         { Component: Component.ReaderMode() },
       ],
     }),
-    Component.Explorer(),
+    Component.Explorer({
+      filterFn: (node) => node.isFolder,
+      folderDefaultState: "open",
+      useSavedState: false,
+    })
   ],
   right: [
-    Component.Graph(),
     Component.DesktopOnly(Component.TableOfContents()),
     Component.Backlinks(),
   ],
@@ -49,7 +81,12 @@ export const defaultContentPageLayout: PageLayout = {
 
 // components for pages that display lists of pages  (e.g. tags or folders)
 export const defaultListPageLayout: PageLayout = {
-  beforeBody: [Component.Breadcrumbs(), Component.ArticleTitle(), Component.ContentMeta()],
+  beforeBody: [
+    Component.Breadcrumbs(), 
+    Component.ArticleTitle(), 
+    Component.ContentMeta(),
+    Component.NoteList(),
+  ],
   left: [
     Component.PageTitle(),
     Component.MobileOnly(Component.Spacer()),
@@ -62,7 +99,11 @@ export const defaultListPageLayout: PageLayout = {
         { Component: Component.Darkmode() },
       ],
     }),
-    Component.Explorer(),
+    Component.Explorer({
+      filterFn: (node) => node.isFolder,
+      folderDefaultState: "open",
+      useSavedState: false,
+    })
   ],
   right: [],
 }
