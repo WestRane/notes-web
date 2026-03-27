@@ -32,7 +32,7 @@ BannerImage.afterDOMLoaded = `
   async function loadCache() {
     if (imageCache) return imageCache;
     try {
-      const res = await fetch("/data/anilist-images.json");
+      const res = await fetch("/static/data/anilist.json");
       imageCache = await res.json();
     } catch (e) {
       imageCache = {};

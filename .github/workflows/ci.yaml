@@ -5,9 +5,18 @@ on:
     branches:
       - v4
   workflow_dispatch:
+    inputs:
+      force:
+        description: "Force refetch all AniList data"
+        type: boolean
+        default: false
+      ids:
+        description: "Specific AniList IDs to refetch (space-separated)"
+        type: string
+        default: ""
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -24,7 +33,7 @@ jobs:
 
     steps:
       - name: Checkout notes-web
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -35,7 +44,7 @@ jobs:
           git -C content pull origin main
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: "npm"
@@ -43,28 +52,34 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Restore AniList image cache
-        uses: actions/cache@v4
-        with:
-          path: public/data/anilist-images.json
-          key: anilist-images-${{ hashFiles('content/**/*.md') }}
-          restore-keys: |
-            anilist-images-
+      - name: Fetch AniList data
+        run: |
+          ARGS=""
+          if [ "${{ inputs.force }}" = "true" ]; then
+            ARGS="--force"
+          fi
+          if [ -n "${{ inputs.ids }}" ]; then
+            ARGS="$ARGS ${{ inputs.ids }}"
+          fi
+          node ./scripts/fetch-anilist.mjs $ARGS
 
-      - name: Fetch AniList images
-        run: node scripts/fetch-anilist.mjs
+      - name: Commit AniList data cache
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "chore: update anilist data cache [skip ci]"
+          file_pattern: 'quartz/static/data/anilist.json'          
 
       - name: Build Quartz
         run: node ./quartz/bootstrap-cli.mjs build
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v6.0.0
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: public
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
