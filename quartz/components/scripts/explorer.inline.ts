@@ -19,6 +19,15 @@ type FolderState = {
   collapsed: boolean
 }
 
+let allData: Record<string, ContentDetails> = {}
+
+function countFilesInFolder(folderPath: string): number {
+  const cleanPath = folderPath.replace(/\/index$/, "")
+  return Object.keys(allData).filter(
+    (slug) => slug.startsWith(cleanPath + "/") && !slug.endsWith("/index")
+  ).length
+}
+
 let currentExplorerState: Array<FolderState>
 function toggleExplorer(this: HTMLElement) {
   const nearestExplorer = this.closest(".explorer") as HTMLElement
@@ -115,6 +124,17 @@ function createFolderNode(
     folderContainer.classList.add("active")
   }
 
+  const count = countFilesInFolder(folderPath)
+  const countEl = document.createElement("span")
+  countEl.className = "folder-count"
+  countEl.textContent = String(count)
+
+  const hasSubfolders = node.children.some(child => child.isFolder)
+  if (!hasSubfolders) {
+    const folderIcon = li.querySelector(".folder-icon") as HTMLElement
+    if (folderIcon) folderIcon.style.visibility = "hidden"
+  }
+
   if (opts.folderClickBehavior === "link") {
     // Replace button with link for link behavior
     const button = titleContainer.querySelector(".folder-button") as HTMLElement
@@ -124,9 +144,11 @@ function createFolderNode(
     a.className = "folder-title"
     a.textContent = node.displayName
     button.replaceWith(a)
+    a.after(countEl)
   } else {
     const span = titleContainer.querySelector(".folder-title") as HTMLElement
     span.textContent = node.displayName
+    span.after(countEl)
   }
 
   // if the saved state is collapsed or the default state is collapsed
@@ -177,6 +199,7 @@ async function setupExplorer(currentSlug: FullSlug) {
     )
 
     const data = await fetchData
+    allData = data as Record<string, ContentDetails>
     const entries = [...Object.entries(data)] as [FullSlug, ContentDetails][]
     const trie = FileTrieNode.fromEntries(entries)
 

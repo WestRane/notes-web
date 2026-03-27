@@ -280,3 +280,11 @@ li:has(> .folder-outer:not(.open)) > .folder-container > svg {
     }
   }
 }
+
+// File count badge next to folder names in the Explorer
+.folder-count {
+  font-size: 12px;
+  color: var(--darkgray);
+  opacity: 0.5;
+  margin-left: 5px;
+}
