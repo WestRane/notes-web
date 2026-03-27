@@ -24,6 +24,13 @@ import Comments from "./Comments"
 import Flex from "./Flex"
 import ConditionalRender from "./ConditionalRender"
 
+import SpoilerWarning from "./custom/SpoilerWarning"
+import ScoreBlock from "./custom/ScoreBlock"
+import ReviewLinks from "./custom/PageLinks"
+import NoteList from "./custom/NoteList"
+import HomePage from "./custom/HomePage"
+import BannerImage from "./custom/BannerImage"
+
 export {
   ArticleTitle,
   Content,
@@ -50,4 +57,12 @@ export {
   Comments,
   Flex,
   ConditionalRender,
+
+  // custom components
+  SpoilerWarning,
+  ScoreBlock,
+  ReviewLinks,
+  NoteList,
+  HomePage,
+  BannerImage,
 }

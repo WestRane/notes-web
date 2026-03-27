@@ -1,0 +1,28 @@
+.page-links {
+  display: flex;
+  gap: 12px;
+  margin-top: 0.25rem;
+}
+
+.page-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--gray);
+  text-decoration: none;
+  transition: color 0.15s ease;
+
+  & svg {
+    opacity: 0.7;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    color: var(--secondary);
+
+    & svg {
+      opacity: 1;
+    }
+  }
+}

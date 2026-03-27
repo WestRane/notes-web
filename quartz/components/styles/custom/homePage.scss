@@ -1,0 +1,63 @@
+.home-intro {
+  font-size: 16px;
+  color: var(--darkgray);
+  opacity: 0.7;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.home-section {
+  margin-bottom: 2rem;
+}
+
+.home-section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.home-section-title {
+  font-size: 14px;
+  color: var(--darkgray);
+  letter-spacing: 0.06em;
+}
+
+.home-section-all {
+  font-size: 14px;
+  color: var(--darkgray);
+  text-decoration: none;
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.home-link-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 5px;
+  background: rgba(128, 128, 128, 0.04);
+  border: 1px solid var(--lightgray);
+  text-decoration: none;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: rgba(128, 128, 128, 0.08);
+  }
+}
+
+.home-link-title {
+  font-size: 14px;
+  color: var(--darkgray);
+}
+
+.home-link-desc {
+  font-size: 12px;
+  color: var(--darkgray);
+  opacity: 0.6;
+}

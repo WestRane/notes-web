@@ -23,14 +23,30 @@ export default ((opts?: Partial<ContentMetaOptions>) => {
   // Merge options with defaults
   const options: ContentMetaOptions = { ...defaultOptions, ...opts }
 
-  function ContentMetadata({ cfg, fileData, displayClass }: QuartzComponentProps) {
+function ContentMetadata({ cfg, fileData, displayClass }: QuartzComponentProps) {
     const text = fileData.text
 
     if (text) {
       const segments: (string | JSX.Element)[] = []
 
       if (fileData.dates) {
-        segments.push(<Date date={getDate(cfg, fileData)!} locale={cfg.locale} />)
+        const { created, modified } = fileData.dates
+        
+        if (created) {
+          segments.push(
+            <span>
+              <b>Created</b>: <Date date={created} locale={cfg.locale} />
+            </span>
+          )
+        }
+
+        if (modified && created && modified.toDateString() !== created.toDateString()) {
+          segments.push(
+            <span>
+              <b>Updated</b>: <Date date={modified} locale={cfg.locale} />
+            </span>
+          )
+        }
       }
 
       // Display reading time if enabled
