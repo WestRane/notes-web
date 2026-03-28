@@ -15,7 +15,7 @@ const config: QuartzConfig = {
     analytics: null,
     locale: "en-US",
     baseUrl: "notes.eastrane.top",
-    ignorePatterns: ["templates", "reviews/.obsidian"],
+    ignorePatterns: ["templates", "reviews/.obsidian", ".github"],
     defaultDateType: "modified",
     theme: {
       fontOrigin: "googleFonts",
