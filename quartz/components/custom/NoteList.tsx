@@ -47,7 +47,7 @@ export function buildPageItem(p: QuartzPluginData, fromSlug: string) {
   const pfm = p.frontmatter as RawFrontmatter
   const dateStr = pfm?.modified ?? pfm?.created
   const tags = pfm?.tags ?? []
-  const FILTER_TAGS = ["review", "note"]
+  const FILTER_TAGS = ["review", "note", "log"]
   const filterTag = FILTER_TAGS.find((t) => tags.includes(t)) ?? null
   return {
     href: resolveRelative(fromSlug, p.slug!),
@@ -63,7 +63,7 @@ export function buildPageItem(p: QuartzPluginData, fromSlug: string) {
   }
 }
 
-const FILTER_TAGS = ["review", "note"]
+const FILTER_TAGS = ["review", "note", "log"]
 
 export default ((_userOpts?: never) => {
   const NoteList: QuartzComponent = ({ allFiles, fileData, displayClass }: QuartzComponentProps) => {
@@ -119,9 +119,19 @@ export default ((_userOpts?: never) => {
         data-available-langs={JSON.stringify(availableLangs)}
         data-page-size={String(DEFAULT_PAGE_SIZE)}
       >
-        <div class="note-list-header">
+      <div class="note-list-header">
           <span class="note-list-count" id="note-list-count"></span>
-          <div class="note-list-filters" id="note-list-filters"></div>
+          <div class="note-list-header-right">
+            <div class="note-list-filters" id="note-list-filters"></div>
+            <label class="note-list-log-toggle" id="note-list-log-toggle"
+              title="Short informal notes, hidden by default">
+              <input type="checkbox" id="note-list-log-switch" />
+              <span class="note-list-log-toggle-track">
+                <span class="note-list-log-toggle-thumb"></span>
+              </span>
+              <span class="note-list-log-toggle-label">logs</span>
+            </label>
+          </div>
         </div>
         <div class="note-list-groups" id="note-list-groups"></div>
         <div class="note-list-pagination" id="note-list-pagination"></div>
@@ -142,18 +152,27 @@ export default ((_userOpts?: never) => {
     const PAGE_SIZE = parseInt(root.dataset.pageSize || "20");
     const availableTags = JSON.parse(root.dataset.availableTags || "[]");
     const availableLangs = JSON.parse(root.dataset.availableLangs || "[]");
-    const multiTag = availableTags.length > 1;
+
+    const hasLogs = DATA.some(function(p) { return p.filterTag === "log"; });
+    const publicTags = availableTags.filter(function(t) { return t !== "log"; });
+    const multiTag = publicTags.length > 1;
     const multiLang = availableLangs.length > 1;
 
     let activeTag = "all";
     let activeLang = "all";
+    let showLogs = false;
     let currentPage = 0;
+
+    const toggleWrapper = document.getElementById("note-list-log-toggle");
+    if (toggleWrapper && hasLogs) {
+      toggleWrapper.classList.add("is-visible");
+    }
 
     const filtersEl = document.getElementById("note-list-filters");
     if (filtersEl) {
       filtersEl.innerHTML = "";
 
-      if (availableTags.length > 0) {
+      if (publicTags.length > 0) {
         const group = document.createElement("div");
         group.className = "note-list-filter-group";
         group.id = "note-list-filter-tag";
@@ -164,7 +183,7 @@ export default ((_userOpts?: never) => {
           btn.textContent = "all";
           group.appendChild(btn);
         }
-        availableTags.forEach(function(t) {
+        publicTags.forEach(function(t) {
           const btn = document.createElement("button");
           btn.className = "note-list-filter-btn" + (!multiTag ? " active" : "");
           btn.dataset.value = t;
@@ -196,15 +215,41 @@ export default ((_userOpts?: never) => {
       }
     }
 
+    function syncLogFilterBtn() {
+      const group = document.getElementById("note-list-filter-tag");
+      if (!group) return;
+      let logBtn = group.querySelector('[data-value="log"]');
+      if (showLogs) {
+        if (!logBtn) {
+          logBtn = document.createElement("button");
+          logBtn.className = "note-list-filter-btn";
+          logBtn.dataset.value = "log";
+          logBtn.textContent = "log";
+          group.appendChild(logBtn);
+        }
+        group.style.display = "";
+      } else {
+        if (logBtn) logBtn.remove();
+        if (activeTag === "log") {
+          activeTag = "all";
+          group.querySelectorAll(".note-list-filter-btn").forEach(function(b) {
+            b.classList.toggle("active", b.dataset.value === "all");
+          });
+        }
+      }
+    }
+
     function filtered() {
       return DATA.filter(function(p) {
+        const isLog = p.filterTag === "log";
+        if (isLog && !showLogs) return false;
         const tagOk = activeTag === "all" || p.filterTag === activeTag;
         const langOk = activeLang === "all" || p.locale === activeLang;
         return tagOk && langOk;
       });
     }
 
-    function renderItem(p, showCategory) {
+    function renderItem(p, showCategory, showType) {
       const a = document.createElement("a");
       a.href = p.href;
       a.className = "note-list-item";
@@ -227,11 +272,18 @@ export default ((_userOpts?: never) => {
       a.appendChild(left);
 
       if (showCategory) {
-        const catEl = document.createElement("span");
-        catEl.className = "note-list-cat";
-        catEl.textContent = p.category || "";
-        a.appendChild(catEl);
-      }
+          const catEl = document.createElement("span");
+          catEl.className = "note-list-cat";
+          catEl.textContent = p.category || "";
+          a.appendChild(catEl);
+        }
+
+        if (showType) {
+          const typeEl = document.createElement("span");
+          typeEl.className = "note-list-type";
+          typeEl.textContent = p.filterTag || "";
+          a.appendChild(typeEl);
+        }
 
       const dateEl = document.createElement("span");
       dateEl.className = "note-list-date";
@@ -298,7 +350,11 @@ export default ((_userOpts?: never) => {
 
         const rowsEl = document.createElement("div");
         rowsEl.className = "note-list-rows";
-        g.items.forEach(function(p) { rowsEl.appendChild(renderItem(p, SHOW_CATEGORY)); });
+        const hasMultipleTypes = new Set(items.map(p => p.filterTag).filter(Boolean)).size > 1;
+        g.items.forEach(function(p) { 
+          rowsEl.appendChild(renderItem(p, SHOW_CATEGORY, hasMultipleTypes)); 
+        });
+
         groupEl.appendChild(rowsEl);
         container.appendChild(groupEl);
       });
@@ -335,7 +391,38 @@ export default ((_userOpts?: never) => {
       });
     }
 
-    setupFilter("note-list-filter-tag", function(v) { activeTag = v; }, multiTag);
+    const logLabel = document.getElementById("note-list-log-toggle");
+    const logSwitch = document.getElementById("note-list-log-switch");
+
+    if (logSwitch) {
+      logSwitch.addEventListener("change", function() {
+        showLogs = logSwitch.checked;
+        logLabel.classList.toggle("is-active", showLogs);
+        currentPage = 0;
+        syncLogFilterBtn();
+        setupLogTagFilter();
+        render();
+      });
+    }
+
+    function setupLogTagFilter() {
+      const group = document.getElementById("note-list-filter-tag");
+      if (!group) return;
+    }
+
+    const tagGroup = document.getElementById("note-list-filter-tag");
+    if (tagGroup) {
+      tagGroup.addEventListener("click", function(e) {
+        const btn = e.target.closest(".note-list-filter-btn");
+        if (!btn) return;
+        tagGroup.querySelectorAll(".note-list-filter-btn").forEach(function(b) { b.classList.remove("active"); });
+        btn.classList.add("active");
+        activeTag = btn.dataset.value;
+        currentPage = 0;
+        render();
+      });
+    }
+
     setupFilter("note-list-filter-lang", function(v) { activeLang = v; }, multiLang);
 
     render();
