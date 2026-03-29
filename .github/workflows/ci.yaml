@@ -39,11 +39,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Checkout notes-content submodule
+      - name: Clone notes-content
         run: |
-          git submodule update --init --recursive
-          git -C content checkout main
-          git -C content pull origin main
+          rm -rf content
+          git clone https://github.com/WestRane/notes-content.git content
 
       - name: Setup Node
         uses: actions/setup-node@v6
