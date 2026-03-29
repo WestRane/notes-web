@@ -1,4 +1,0 @@
-[submodule "content"]
-	path = content
-	url = https://github.com/WestRane/notes-content.git
-	ignore = all
