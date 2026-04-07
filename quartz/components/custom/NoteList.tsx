@@ -160,7 +160,7 @@ export default ((_userOpts?: never) => {
 
     let activeTag = "all";
     let activeLang = "all";
-    let showLogs = false;
+    let showLogs = sessionStorage.getItem('noteListShowLogs') === '1';
     let currentPage = 0;
 
     const toggleWrapper = document.getElementById("note-list-log-toggle");
@@ -394,9 +394,16 @@ export default ((_userOpts?: never) => {
     const logLabel = document.getElementById("note-list-log-toggle");
     const logSwitch = document.getElementById("note-list-log-switch");
 
+    if (logSwitch && showLogs) {
+      logSwitch.checked = true;
+      if (toggleWrapper) toggleWrapper.classList.add("is-active");
+      syncLogFilterBtn();
+    }
+
     if (logSwitch) {
       logSwitch.addEventListener("change", function() {
         showLogs = logSwitch.checked;
+        sessionStorage.setItem('noteListShowLogs', showLogs ? '1' : '0');
         logLabel.classList.toggle("is-active", showLogs);
         currentPage = 0;
         syncLogFilterBtn();
