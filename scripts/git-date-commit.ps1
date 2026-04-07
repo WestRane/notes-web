@@ -3,7 +3,7 @@ function git-date-commit {
     $staging = $true
     while ($staging) {
         Write-Host "`n--- Git Pre-Commit Menu ---" -ForegroundColor Cyan
-
+        
         $choice = (Read-Host "[s] Status, [d] Diff, [l] Log, [a] Add All, [c] Continue, [q] Quit").Trim().ToLower()
         
         switch ($choice) {
@@ -14,12 +14,12 @@ function git-date-commit {
     		Write-Host "--- Staged Changes ---" -ForegroundColor Green
     		git diff --cached 
 		}
-            "l" { 
-                Write-Host "`n--- Recent Activity ---" -ForegroundColor Gray
-
-                git log -n 15 --date=format:'%d.%m.%Y' --pretty=format:"%C(yellow)%h%Creset %C(magenta)%ad%Creset %s"
-                Write-Host "`n"
-            }
+		"l" { 
+		    Write-Host "`n--- Recent Activity ---" -ForegroundColor Gray
+		    Write-Host "Hash    | Author Date | Commit Date | Message" -ForegroundColor DarkGray
+		    git log -n 15 --date=format:'%d.%m.%Y' --pretty=format:"%C(yellow)%h%Creset | %C(magenta)%ad%Creset | %C(cyan)%cd%Creset | %s"
+		    Write-Host "`n"
+		}
             "a" { git add .; Write-Host "Staged all changes." -ForegroundColor Green }
             "c" { $staging = $false } 
             "q" { return }
