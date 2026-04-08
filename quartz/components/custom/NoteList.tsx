@@ -119,7 +119,7 @@ export default ((_userOpts?: never) => {
         data-available-langs={JSON.stringify(availableLangs)}
         data-page-size={String(DEFAULT_PAGE_SIZE)}
       >
-      <div class="note-list-header">
+        <div class="note-list-header">
           <span class="note-list-count" id="note-list-count"></span>
           <div class="note-list-header-right">
             <div class="note-list-filters" id="note-list-filters"></div>
@@ -161,7 +161,7 @@ export default ((_userOpts?: never) => {
     let activeTag = "all";
     let activeLang = "all";
     let showLogs = sessionStorage.getItem('noteListShowLogs') === '1';
-    let currentPage = 0;
+    let currentPage = Math.max(0, parseInt(new URLSearchParams(location.search).get('page') || '1') - 1);
 
     const toggleWrapper = document.getElementById("note-list-log-toggle");
     if (toggleWrapper && hasLogs) {
@@ -272,18 +272,18 @@ export default ((_userOpts?: never) => {
       a.appendChild(left);
 
       if (showCategory) {
-          const catEl = document.createElement("span");
-          catEl.className = "note-list-cat";
-          catEl.textContent = p.category || "";
-          a.appendChild(catEl);
-        }
+        const catEl = document.createElement("span");
+        catEl.className = "note-list-cat";
+        catEl.textContent = p.category || "";
+        a.appendChild(catEl);
+      }
 
-        if (showType) {
-          const typeEl = document.createElement("span");
-          typeEl.className = "note-list-type";
-          typeEl.textContent = p.filterTag || "";
-          a.appendChild(typeEl);
-        }
+      if (showType) {
+        const typeEl = document.createElement("span");
+        typeEl.className = "note-list-type";
+        typeEl.textContent = p.filterTag || "";
+        a.appendChild(typeEl);
+      }
 
       const dateEl = document.createElement("span");
       dateEl.className = "note-list-date";
@@ -312,7 +312,17 @@ export default ((_userOpts?: never) => {
       const items = filtered();
       const totalPages = Math.ceil(items.length / PAGE_SIZE);
 
-      if (currentPage >= totalPages) currentPage = Math.max(0, totalPages - 1);
+      if (currentPage >= totalPages) {
+        currentPage = Math.max(0, totalPages - 1);
+      }
+
+      const url = new URL(location.href);
+      if (currentPage === 0) {
+        url.searchParams.delete('page');
+      } else {
+        url.searchParams.set('page', currentPage + 1);
+      }
+      history.replaceState(null, '', url);
 
       const start = currentPage * PAGE_SIZE;
       const visible = items.slice(start, start + PAGE_SIZE);
@@ -351,8 +361,8 @@ export default ((_userOpts?: never) => {
         const rowsEl = document.createElement("div");
         rowsEl.className = "note-list-rows";
         const hasMultipleTypes = new Set(items.map(p => p.filterTag).filter(Boolean)).size > 1;
-        g.items.forEach(function(p) { 
-          rowsEl.appendChild(renderItem(p, SHOW_CATEGORY, hasMultipleTypes)); 
+        g.items.forEach(function(p) {
+          rowsEl.appendChild(renderItem(p, SHOW_CATEGORY, hasMultipleTypes));
         });
 
         groupEl.appendChild(rowsEl);
@@ -407,14 +417,8 @@ export default ((_userOpts?: never) => {
         logLabel.classList.toggle("is-active", showLogs);
         currentPage = 0;
         syncLogFilterBtn();
-        setupLogTagFilter();
         render();
       });
-    }
-
-    function setupLogTagFilter() {
-      const group = document.getElementById("note-list-filter-tag");
-      if (!group) return;
     }
 
     const tagGroup = document.getElementById("note-list-filter-tag");
