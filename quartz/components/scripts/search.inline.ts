@@ -33,7 +33,11 @@ const encoder = (str: string): string[] => {
       (code >= 0xac00 && code <= 0xd7af) ||
       (code >= 0x20000 && code <= 0x2a6df)
 
-    const isWhitespace = code === 32 || code === 9 || code === 10 || code === 13
+    const isWhitespace = code === 32 || code === 9 || code === 10 || code === 13 || 
+      (code >= 33 && code <= 47) || // !"#$%&'()*+,-./
+      (code >= 58 && code <= 64) || // :;<=>?@
+      (code >= 91 && code <= 96) || // [\]^_`
+      (code >= 123 && code <= 126)  // {|}~
 
     if (isCJK) {
       if (bufferStart !== -1) {
