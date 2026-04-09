@@ -158,10 +158,11 @@ export default ((_userOpts?: never) => {
     const multiTag = publicTags.length > 1;
     const multiLang = availableLangs.length > 1;
 
-    let activeTag = "all";
-    let activeLang = "all";
+    const params = new URLSearchParams(location.search);
+    let activeTag = params.get('tag') || 'all';
+    let activeLang = params.get('lang') || 'all';
     let showLogs = sessionStorage.getItem('noteListShowLogs') === '1';
-    let currentPage = Math.max(0, parseInt(new URLSearchParams(location.search).get('page') || '1') - 1);
+    let currentPage = Math.max(0, parseInt(params.get('page') || '1') - 1);
 
     const toggleWrapper = document.getElementById("note-list-log-toggle");
     if (toggleWrapper && hasLogs) {
@@ -178,14 +179,14 @@ export default ((_userOpts?: never) => {
         group.id = "note-list-filter-tag";
         if (multiTag) {
           const btn = document.createElement("button");
-          btn.className = "note-list-filter-btn active";
+          btn.className = "note-list-filter-btn";
           btn.dataset.value = "all";
           btn.textContent = "all";
           group.appendChild(btn);
         }
         publicTags.forEach(function(t) {
           const btn = document.createElement("button");
-          btn.className = "note-list-filter-btn" + (!multiTag ? " active" : "");
+          btn.className = "note-list-filter-btn";
           btn.dataset.value = t;
           btn.textContent = t;
           group.appendChild(btn);
@@ -199,20 +200,29 @@ export default ((_userOpts?: never) => {
         group.id = "note-list-filter-lang";
         if (multiLang) {
           const btn = document.createElement("button");
-          btn.className = "note-list-filter-btn active";
+          btn.className = "note-list-filter-btn";
           btn.dataset.value = "all";
           btn.textContent = "all";
           group.appendChild(btn);
         }
         availableLangs.forEach(function(l) {
           const btn = document.createElement("button");
-          btn.className = "note-list-filter-btn" + (!multiLang ? " active" : "");
+          btn.className = "note-list-filter-btn";
           btn.dataset.value = l;
           btn.textContent = l;
           group.appendChild(btn);
         });
         filtersEl.appendChild(group);
       }
+
+      ['note-list-filter-tag', 'note-list-filter-lang'].forEach(function(groupId) {
+        const group = document.getElementById(groupId);
+        if (!group) return;
+        const activeVal = groupId === 'note-list-filter-tag' ? activeTag : activeLang;
+        group.querySelectorAll('.note-list-filter-btn').forEach(function(b) {
+          b.classList.toggle('active', b.dataset.value === activeVal);
+        });
+      });
     }
 
     function syncLogFilterBtn() {
@@ -321,6 +331,16 @@ export default ((_userOpts?: never) => {
         url.searchParams.delete('page');
       } else {
         url.searchParams.set('page', currentPage + 1);
+      }
+      if (activeTag === 'all') {
+        url.searchParams.delete('tag');
+      } else {
+        url.searchParams.set('tag', activeTag);
+      }
+      if (activeLang === 'all') {
+        url.searchParams.delete('lang');
+      } else {
+        url.searchParams.set('lang', activeLang);
       }
       history.replaceState(null, '', url);
 
