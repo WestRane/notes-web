@@ -82,18 +82,20 @@ async function main() {
   }
 
   const files = await findMarkdownFiles(CONTENT_DIR)
-  const ids = new Set()
+  const idsInContent = new Set()
 
   for (const file of files) {
     const id = await extractAnilistId(file)
-    if (id) ids.add(id)
+    if (id) idsInContent.add(id)
   }
 
-  console.log(`Found ${ids.size} AniList IDs in content`)
+  console.log(`Found ${idsInContent.size} AniList IDs in content`)
 
-  const newIds = [...ids].filter((id) => !cache[id] || forceIds.includes(id))
+  // 1. Identify New IDs
+  const newIds = [...idsInContent].filter((id) => !cache[id] || forceIds.includes(id))
 
-  const staleIds = [...ids].filter(
+  // 2. Identify Stale IDs (Old cache or missing images)
+  const staleIds = [...idsInContent].filter(
     (id) =>
       cache[id] &&
       !forceIds.includes(id) &&
@@ -108,12 +110,32 @@ async function main() {
     .filter((id) => cache[id].banner && cache[id].cover)
     .sort((a, b) => (cache[a].fetchedAt ?? 0) - (cache[b].fetchedAt ?? 0))
 
-  const toFetch = [...newIds, ...staleWithNull, ...staleComplete].slice(0, MAX_REFETCH)
-  console.log(`Fetching ${toFetch.length} IDs (${newIds.length} new, ${Math.min(staleIds.length, MAX_REFETCH - newIds.length)} stale)...`)
+  // Queue logic
+  const allPending = [...newIds, ...staleWithNull, ...staleComplete]
+  const toFetch = allPending.slice(0, MAX_REFETCH)
+
+  // Calculations for logging
+  const fetchingNew = toFetch.filter(id => newIds.includes(id)).length
+  const fetchingStale = toFetch.length - fetchingNew;
+
+  const remainingTotal = Math.max(0, allPending.length - MAX_REFETCH)
+  const remainingNew = newIds.length - fetchingNew
+  const remainingStale = (staleWithNull.length + staleComplete.length) - fetchingStale
+
+  console.log(`\n--- Batch Info ---`)
+  console.log(`Processing: ${toFetch.length} IDs (${fetchingNew} new, ${fetchingStale} stale)`)
+  
+  if (remainingTotal > 0) {
+    console.log(`Queue: ${remainingTotal} IDs left for next run (${remainingNew} new, ${remainingStale} stale)`)
+  } else {
+    console.log(`Queue: All clear!`)
+  }
+  console.log(`------------------\n`)
 
   for (let i = 0; i < toFetch.length; i++) {
     const id = toFetch[i]
-    console.log(`  Fetching id ${id}...`)
+    process.stdout.write(`[${i + 1}/${toFetch.length}] Fetching id ${id}... `)
+    
     try {
       const media = await fetchAnilistMedia(id)
       cache[id] = {
@@ -121,18 +143,22 @@ async function main() {
         banner: media?.bannerImage ?? null,
         cover: media?.coverImage?.extraLarge ?? media?.coverImage?.large ?? null,
       }
-      console.log(`  ✓ banner: ${!!cache[id].banner}, cover: ${!!cache[id].cover}`)
+      console.log(`✓ (Banner: ${!!cache[id].banner}, Cover: ${!!cache[id].cover})`)
     } catch (err) {
-      console.error(`  ✗ Failed for id ${id}:`, err.message)
+      console.log(`\n✗ Failed for id ${id}: ${err.message}`)
     }
+
     if (i < toFetch.length - 1) {
       await sleep(DELAY_MS)
     }
   }
 
-  await mkdir("quartz/static/data", { recursive: true })
+  // Ensure directory exists and save
+  const dataDir = CACHE_FILE.substring(0, CACHE_FILE.lastIndexOf('/'))
+  await mkdir(dataDir, { recursive: true })
   await writeFile(CACHE_FILE, JSON.stringify(cache, null, 2))
-  console.log(`Saved cache: ${Object.keys(cache).length} entries → ${CACHE_FILE}`)
+  
+  console.log(`\nSuccess: ${Object.keys(cache).length} entries saved to ${CACHE_FILE}`)
 }
 
 main().catch((err) => {
