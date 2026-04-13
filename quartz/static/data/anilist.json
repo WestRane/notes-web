@@ -74,6 +74,11 @@
     "banner": "https://s4.anilist.co/file/anilistcdn/media/anime/banner/9617-MhdXJVRG49cA.jpg",
     "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx9617-Z2RA1TIkcNEg.png"
   },
+  "9756": {
+    "fetchedAt": 1776117120805,
+    "banner": "https://s4.anilist.co/file/anilistcdn/media/anime/banner/9756-d5M8NffgJJHB.jpg",
+    "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx9756-QnUGwlwwnsuN.jpg"
+  },
   "10491": {
     "fetchedAt": 1775580008822,
     "banner": "https://s4.anilist.co/file/anilistcdn/media/anime/banner/10491-8BoV0ykSMIvJ.jpg",
@@ -299,6 +304,11 @@
     "banner": "https://s4.anilist.co/file/anilistcdn/media/anime/banner/105074-YNIq1KPPJbNe.jpg",
     "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx105074-flcJxKWZ5IZz.jpg"
   },
+  "105333": {
+    "fetchedAt": 1776117119106,
+    "banner": "https://s4.anilist.co/file/anilistcdn/media/anime/banner/105333-KWKGvBM8Hyga.jpg",
+    "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx105333-GybuoSoOZfpH.jpg"
+  },
   "106286": {
     "fetchedAt": 1775760950186,
     "banner": "https://s4.anilist.co/file/anilistcdn/media/anime/banner/106286-3oKwiwjd7Wkm.jpg",
@@ -393,6 +403,16 @@
     "fetchedAt": 1775909966505,
     "banner": "https://s4.anilist.co/file/anilistcdn/media/anime/banner/114535-ASUprf4AsNwC.jpg",
     "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx114535-y3NnjexcqKG1.jpg"
+  },
+  "114862": {
+    "fetchedAt": 1776117119671,
+    "banner": "https://s4.anilist.co/file/anilistcdn/media/anime/banner/114862-tM16kKlbGNMg.jpg",
+    "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx114862-DTRU67Z1gJ9N.jpg"
+  },
+  "114888": {
+    "fetchedAt": 1776117120235,
+    "banner": "https://s4.anilist.co/file/anilistcdn/media/anime/banner/114888-YVXJvMnuWCDb.jpg",
+    "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx114888-lgecUF3O1AWS.png"
   },
   "114981": {
     "fetchedAt": 1774630783365,
