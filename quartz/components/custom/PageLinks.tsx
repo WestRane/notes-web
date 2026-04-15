@@ -11,17 +11,44 @@ const ANILIST_CATEGORY_MAP: Record<string, string> = {
 
 interface RawFrontmatter {
   category?: string
-  ids?: {
-    anilist?: number
-    mal?: number
+  ids?: Record<string, string | number>
+}
+
+interface ProviderConfig {
+  label: string
+  icon: JSX.Element
+  getUrl: (id: string | number, category?: string) => string
+}
+
+const providers: Record<string, ProviderConfig> = {
+  anilist: {
+    label: "AniList",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 172 172" fill="none">
+        <path d="M111.322,111.157 L111.322,41.029 C111.322,37.010 109.105,34.792 105.086,34.792 L91.365,34.792 C87.346,34.792 85.128,37.010 85.128,41.029 C85.128,41.029 85.128,56.337 85.128,74.333 C85.128,75.271 94.165,79.626 94.401,80.547 C101.286,107.449 95.897,128.980 89.370,129.985 C100.042,130.513 101.216,135.644 93.267,132.138 C94.483,117.784 99.228,117.812 112.869,131.610 C112.986,131.729 115.666,137.351 115.833,137.351 C131.170,137.351 148.050,137.351 148.050,137.351 C152.069,137.351 154.286,135.134 154.286,131.115 L154.286,117.394 C154.286,113.375 152.069,111.157 148.050,111.157 L111.322,111.157 Z" fill="currentColor" fill-rule="evenodd"/>
+        <path d="M54.365,34.792 L18.331,137.351 L46.327,137.351 L52.425,119.611 L82.915,119.611 L88.875,137.351 L116.732,137.351 L80.836,34.792 L54.365,34.792 ZM58.800,96.882 L67.531,68.470 L77.094,96.882 L58.800,96.882 Z" fill="currentColor" fill-rule="evenodd"/>
+      </svg>
+    ),
+    getUrl: (id, category) => {
+      const anilistCategory = ANILIST_CATEGORY_MAP[category ?? ""] ?? category ?? "anime"
+      return `https://anilist.co/${anilistCategory}/${id}`
+    }
+  },
+  steam: {
+    label: "Steam",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 32 32" fill="currentColor">
+        <path d="M18.102 12.129c0-0 0-0 0-0.001 0-1.564 1.268-2.831 2.831-2.831s2.831 1.268 2.831 2.831c0 1.564-1.267 2.831-2.831 2.831-0 0-0 0-0.001 0h0c-0 0-0 0-0.001 0-1.563 0-2.83-1.267-2.83-2.83 0-0 0-0 0-0.001v0zM24.691 12.135c0-2.081-1.687-3.768-3.768-3.768s-3.768 1.687-3.768 3.768c0 2.081 1.687 3.768 3.768 3.768v0c2.080-0.003 3.765-1.688 3.768-3.767v-0zM10.427 23.76l-1.841-0.762c0.524 1.078 1.611 1.808 2.868 1.808 1.317 0 2.448-0.801 2.93-1.943l0.008-0.021c0.155-0.362 0.246-0.784 0.246-1.226 0-1.757-1.424-3.181-3.181-3.181-0.405 0-0.792 0.076-1.148 0.213l0.022-0.007 1.903 0.787c0.852 0.364 1.439 1.196 1.439 2.164 0 1.296-1.051 2.347-2.347 2.347-0.324 0-0.632-0.066-0.913-0.184l0.015 0.006zM15.974 1.004c-7.857 0.001-14.301 6.046-14.938 13.738l-0.004 0.054 8.038 3.322c0.668-0.462 1.495-0.737 2.387-0.737 0.001 0 0.002 0 0.002 0h-0c0.079 0 0.156 0.005 0.235 0.008l3.575-5.176v-0.074c0.003-3.12 2.533-5.648 5.653-5.648 3.122 0 5.653 2.531 5.653 5.653s-2.531 5.653-5.653 5.653h-0.131l-5.094 3.638c0 0.065 0.005 0.131 0.005 0.199 0 0.001 0 0.002 0 0.003 0 2.342-1.899 4.241-4.241 4.241-2.047 0-3.756-1.451-4.153-3.38l-0.005-0.027-5.755-2.383c1.841 6.345 7.601 10.905 14.425 10.905 8.281 0 14.994-6.713 14.994-14.994s-6.713-14.994-14.994-14.994c-0 0-0.001 0-0.001 0h0z"></path>
+      </svg>
+    ),
+    getUrl: (id) => `https://store.steampowered.com/app/${id}/`
   }
 }
 
 const PageLinks: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   const frontmatter = fileData.frontmatter as RawFrontmatter | undefined
-  const anilistId = frontmatter?.ids?.anilist
+  const ids = frontmatter?.ids
   const category = frontmatter?.category
-  const anilistCategory = ANILIST_CATEGORY_MAP[category ?? ""] ?? category ?? "anime"
 
   const filePath = fileData.filePath
   const contentPrefix = "content/"
@@ -29,27 +56,36 @@ const PageLinks: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
     ? filePath.slice(filePath.indexOf(contentPrefix) + contentPrefix.length)
     : filePath ?? null
 
-  const anilistUrl = anilistId
-    ? `https://anilist.co/${anilistCategory}/${anilistId}`
-    : null
-
   const githubUrl = repoPath
     ? `https://github.com/${GITHUB_REPO}/blob/main/${repoPath}`
     : null
 
-  if (!anilistUrl && !githubUrl) return null
+  const generatedLinks: { url: string; label: string; icon: JSX.Element }[] = []
+  
+  if (ids) {
+    for (const[providerKey, idValue] of Object.entries(ids)) {
+      if (idValue && providers[providerKey]) {
+        const provider = providers[providerKey]
+        generatedLinks.push({
+          url: provider.getUrl(idValue, category),
+          label: provider.label,
+          icon: provider.icon
+        })
+      }
+    }
+  }
+
+  if (generatedLinks.length === 0 && !githubUrl) return null
 
   return (
     <div class="page-links">
-      {anilistUrl && (
-        <a href={anilistUrl} target="_blank" rel="noopener" class="page-link">
-          <svg width="14" height="14" viewBox="0 0 172 172" fill="none">
-            <path d="M111.322,111.157 L111.322,41.029 C111.322,37.010 109.105,34.792 105.086,34.792 L91.365,34.792 C87.346,34.792 85.128,37.010 85.128,41.029 C85.128,41.029 85.128,56.337 85.128,74.333 C85.128,75.271 94.165,79.626 94.401,80.547 C101.286,107.449 95.897,128.980 89.370,129.985 C100.042,130.513 101.216,135.644 93.267,132.138 C94.483,117.784 99.228,117.812 112.869,131.610 C112.986,131.729 115.666,137.351 115.833,137.351 C131.170,137.351 148.050,137.351 148.050,137.351 C152.069,137.351 154.286,135.134 154.286,131.115 L154.286,117.394 C154.286,113.375 152.069,111.157 148.050,111.157 L111.322,111.157 Z" fill="currentColor" fill-rule="evenodd"/>
-            <path d="M54.365,34.792 L18.331,137.351 L46.327,137.351 L52.425,119.611 L82.915,119.611 L88.875,137.351 L116.732,137.351 L80.836,34.792 L54.365,34.792 ZM58.800,96.882 L67.531,68.470 L77.094,96.882 L58.800,96.882 Z" fill="currentColor" fill-rule="evenodd"/>
-          </svg>
-          AniList
+      {generatedLinks.map((link) => (
+        <a href={link.url} target="_blank" rel="noopener" class="page-link">
+          {link.icon}
+          {link.label}
         </a>
-      )}
+      ))}
+
       {githubUrl && (
         <a href={githubUrl} target="_blank" rel="noopener" class="page-link">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
