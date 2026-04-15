@@ -140,6 +140,7 @@ declare module "vfile" {
     } & Partial<{
         tags: string[]
         aliases: string[]
+        aka: string[]
         modified: string
         created: string
         published: string

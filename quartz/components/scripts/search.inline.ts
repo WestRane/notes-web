@@ -9,6 +9,7 @@ interface Item {
   title: string
   content: string
   tags: string[]
+  aka: string[]
   [key: string]: any
 }
 
@@ -73,6 +74,10 @@ let index = new FlexSearch.Document<Item>({
     index: [
       {
         field: "title",
+        tokenize: "forward",
+      },
+      {
+        field: "aka",
         tokenize: "forward",
       },
       {
@@ -311,14 +316,34 @@ async function setupSearch(searchElement: Element, currentSlug: FullSlug, data: 
     }
   }
 
-  const formatForDisplay = (term: string, id: number) => {
+  const formatForDisplay = (term: string, id: number): Item => {
     const slug = idDataMap[id]
+    const item = data[slug]
+    
+    const matchedAka = item.aka?.find(a => 
+      a.toLowerCase().includes(term.toLowerCase())
+    )
+    
+    const titleMatches = item.title?.toLowerCase().includes(term.toLowerCase())
+    
+    let displayTitle: string
+    if (searchType === "tags") {
+      displayTitle = item.title
+    } else {
+      displayTitle = highlight(term, item.title ?? "")
+      
+      if (matchedAka && !titleMatches) {
+        displayTitle += ` <span class="aka-match">(${highlight(term, matchedAka)})</span>`
+      }
+    }
+    
     return {
       id,
       slug,
-      title: searchType === "tags" ? data[slug].title : highlight(term, data[slug].title ?? ""),
-      content: highlight(term, data[slug].content ?? "", true),
-      tags: highlightTags(term.substring(1), data[slug].tags),
+      title: displayTitle,
+      content: highlight(term, item.content ?? "", true),
+      tags: highlightTags(term.substring(1), item.tags),
+      aka: item.aka || [],
     }
   }
 
@@ -478,7 +503,7 @@ async function setupSearch(searchElement: Element, currentSlug: FullSlug, data: 
       searchResults = await index.searchAsync({
         query: currentSearchTerm,
         limit: numSearchResults,
-        index: ["title", "content"],
+        index: ["title", "content", "aka"],
       })
     }
 
@@ -490,6 +515,7 @@ async function setupSearch(searchElement: Element, currentSlug: FullSlug, data: 
     // order titles ahead of content
     const allIds: Set<number> = new Set([
       ...getByField("title"),
+      ...getByField("aka"),
       ...getByField("content"),
       ...getByField("tags"),
     ])
@@ -526,6 +552,7 @@ async function fillDocument(data: ContentIndex) {
         title: fileData.title,
         content: fileData.content,
         tags: fileData.tags,
+        aka: fileData.aka || [],
       }),
     )
   }
