@@ -4,19 +4,39 @@ import style from ".././styles/custom/bannerImage.scss"
 import anilistData from "../../static/data/anilist.json"
 
 interface RawFrontmatter {
-  ids?: {
-    anilist?: number
+  ids?: Record<string, string | number>
+}
+
+const providers = {
+  anilist: (id: string | number) => {
+    const entry = (anilistData as Record<string, { banner?: string }>)[String(id)]
+    return entry?.banner || null
+  },
+  steam: (id: string | number) => {
+    return `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${id}/library_hero.jpg`
   }
 }
 
 const BannerImage: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   const frontmatter = fileData.frontmatter as RawFrontmatter | undefined
-  const anilistId = frontmatter?.ids?.anilist
+  const ids = frontmatter?.ids
 
-  if (!anilistId) return null
+  if (!ids) return null
 
-  const entry = (anilistData as Record<string, { banner?: string }>)[String(anilistId)]
-  const bannerUrl = entry?.banner
+  let bannerUrl: string | null = null
+  let activeProvider: string | null = null
+  let activeId: string | null = null
+
+  for (const[provider, id] of Object.entries(ids)) {
+    if (provider in providers && id) {
+      bannerUrl = providers[provider as keyof typeof providers](id)
+      activeProvider = provider
+      activeId = String(id)
+      if (bannerUrl) break
+    }
+  }
+
+  if (!activeProvider || !activeId) return null
 
   const innerStyle = bannerUrl ? `background-image: url(${bannerUrl})` : ""
 
@@ -24,7 +44,8 @@ const BannerImage: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
     <div
       class={`banner-image${bannerUrl ? " loaded" : ""}`}
       id="banner-image-root"
-      data-anilist-id={String(anilistId)}
+      data-provider={activeProvider}
+      data-provider-id={activeId}
       style={!bannerUrl ? "display:none" : ""}
     >
       <div
@@ -40,41 +61,55 @@ BannerImage.css = style
 
 BannerImage.afterDOMLoaded = `
 (function() {
-  let imageCache = null;
+  let anilistCache = null;
 
-  async function loadCache() {
-    if (imageCache) return imageCache;
+  async function getAnilistCache() {
+    if (anilistCache) return anilistCache;
     try {
       const res = await fetch("/static/data/anilist.json");
-      imageCache = await res.json();
+      anilistCache = await res.json();
     } catch (e) {
-      imageCache = {};
+      anilistCache = {};
     }
-    return imageCache;
+    return anilistCache;
+  }
+
+  async function getBannerUrl(provider, id) {
+    if (provider === 'anilist') {
+      const cache = await getAnilistCache();
+      return cache[id]?.banner;
+    }
+    if (provider === 'steam') {
+      return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/" + id + "/library_hero.jpg";
+    }
+    return null;
   }
 
   async function init() {
     const root = document.getElementById("banner-image-root");
     if (!root) return;
 
-    const anilistId = root.dataset.anilistId;
-    if (!anilistId) return;
+    const provider = root.dataset.provider;
+    const id = root.dataset.providerId;
+    if (!provider || !id) return;
 
     const inner = document.getElementById("banner-image-inner");
     if (!inner) return;
 
-    // Если уже установлено через SSR — пропускаем
-    if (inner.style.backgroundImage) return;
+    if (inner.style.backgroundImage) {
+      root.style.display = "";
+      root.classList.add("loaded");
+      return;
+    }
 
-    const cache = await loadCache();
-    const entry = cache[anilistId];
-    const bannerUrl = entry?.banner;
+    const bannerUrl = await getBannerUrl(provider, id);
 
     if (!bannerUrl) {
       root.style.display = "none";
       return;
     }
 
+    root.style.display = "";
     inner.style.backgroundImage = "url(" + bannerUrl + ")";
     root.classList.add("loaded");
   }
