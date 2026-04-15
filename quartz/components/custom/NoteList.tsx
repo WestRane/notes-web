@@ -229,7 +229,7 @@ export default ((_userOpts?: never) => {
       const group = document.getElementById("note-list-filter-tag");
       if (!group) return;
       let logBtn = group.querySelector('[data-value="log"]');
-      if (showLogs) {
+      if (showLogs && hasLogs) {
         if (!logBtn) {
           logBtn = document.createElement("button");
           logBtn.className = "note-list-filter-btn";
