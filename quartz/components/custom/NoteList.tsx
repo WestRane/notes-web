@@ -438,6 +438,7 @@ export default ((_userOpts?: never) => {
         currentPage = 0;
         syncLogFilterBtn();
         render();
+        document.dispatchEvent(new CustomEvent("updateExplorerCounters"));
       });
     }
 

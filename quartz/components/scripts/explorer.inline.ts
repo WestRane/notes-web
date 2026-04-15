@@ -23,9 +23,17 @@ let allData: Record<string, ContentDetails> = {}
 
 function countFilesInFolder(folderPath: string): number {
   const cleanPath = folderPath.replace(/\/index$/, "")
-  return Object.keys(allData).filter(
-    (slug) => slug.startsWith(cleanPath + "/") && !slug.endsWith("/index")
-  ).length
+  const showLogs = sessionStorage.getItem('noteListShowLogs') === '1'
+
+  return Object.entries(allData).filter(([slug, details]) => {
+    const isInFolder = slug.startsWith(cleanPath + "/") && !slug.endsWith("/index")
+    if (!isInFolder) return false
+
+    const isLog = details.tags?.includes("log")
+    if (isLog && !showLogs) return false
+
+    return true
+  }).length
 }
 
 let currentExplorerState: Array<FolderState>
@@ -321,6 +329,20 @@ window.addEventListener("resize", function () {
     document.documentElement.classList.add("mobile-no-scroll")
     return
   }
+})
+
+// Listener for changing counters
+document.addEventListener("updateExplorerCounters", () => {
+  const allFolders = document.querySelectorAll(".folder-container")
+  allFolders.forEach(folder => {
+    const path = folder.getAttribute("data-folderpath")
+    if (path) {
+      const countEl = folder.querySelector(".folder-count")
+      if (countEl) {
+        countEl.textContent = String(countFilesInFolder(path))
+      }
+    }
+  })
 })
 
 function setFolderState(folderElement: HTMLElement, collapsed: boolean) {
