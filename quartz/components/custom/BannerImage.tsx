@@ -1,6 +1,8 @@
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from ".././types"
 import style from ".././styles/custom/bannerImage.scss"
 
+import anilistData from "../../static/data/anilist.json"
+
 interface RawFrontmatter {
   ids?: {
     anilist?: number
@@ -10,15 +12,26 @@ interface RawFrontmatter {
 const BannerImage: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   const frontmatter = fileData.frontmatter as RawFrontmatter | undefined
   const anilistId = frontmatter?.ids?.anilist
+
   if (!anilistId) return null
+
+  const entry = (anilistData as Record<string, { banner?: string }>)[String(anilistId)]
+  const bannerUrl = entry?.banner
+
+  const innerStyle = bannerUrl ? `background-image: url(${bannerUrl})` : ""
 
   return (
     <div
-      class="banner-image"
+      class={`banner-image${bannerUrl ? " loaded" : ""}`}
       id="banner-image-root"
       data-anilist-id={String(anilistId)}
+      style={!bannerUrl ? "display:none" : ""}
     >
-      <div class="banner-image-inner" id="banner-image-inner"></div>
+      <div
+        class="banner-image-inner"
+        id="banner-image-inner"
+        style={innerStyle}
+      ></div>
     </div>
   )
 }
@@ -49,6 +62,9 @@ BannerImage.afterDOMLoaded = `
 
     const inner = document.getElementById("banner-image-inner");
     if (!inner) return;
+
+    // Если уже установлено через SSR — пропускаем
+    if (inner.style.backgroundImage) return;
 
     const cache = await loadCache();
     const entry = cache[anilistId];
