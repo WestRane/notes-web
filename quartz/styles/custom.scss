@@ -32,13 +32,20 @@ img[alt="|700"] {
 
 // Make "aka" field color more muted in search results
 .aka-match {
-  font-size: 0.75em;
-  opacity: 0.65;
+  font-size: 0.7em;
+  opacity: 0.6;
   font-weight: normal;
-  margin-left: 0.3em;
+  margin-left: 2px;
   vertical-align: middle;
-  
-  .highlight {
-    background-color: rgba(255, 223, 0, 0.3);
-  }
+}
+
+// Make breadcrumbs more muted in search results
+.search-breadcrumbs {
+  font-size: 0.7em;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--darkgray);
+  opacity: 0.6;
+  line-height: 1;
 }

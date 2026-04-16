@@ -369,11 +369,20 @@ async function setupSearch(searchElement: Element, currentSlug: FullSlug, data: 
 
   const resultToHTML = ({ slug, title, content, tags }: Item) => {
     const htmlTags = tags.length > 0 ? `<ul class="tags">${tags.join("")}</ul>` : ``
+
+  const pathParts = slug.split('/')
+  pathParts.pop()
+  const breadcrumbs = pathParts.join(' › ')
+  const breadcrumbsHtml = breadcrumbs 
+    ? `<div class="search-breadcrumbs">${breadcrumbs}</div>` 
+    : ''
+
     const itemTile = document.createElement("a")
     itemTile.classList.add("result-card")
     itemTile.id = slug
     itemTile.href = resolveUrl(slug).toString()
     itemTile.innerHTML = `
+      ${breadcrumbsHtml}
       <h3 class="card-title">${title}</h3>
       ${htmlTags}
       <p class="card-description">${content}</p>
