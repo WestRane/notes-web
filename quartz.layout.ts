@@ -9,15 +9,15 @@ export const sharedPageComponents: SharedLayout = {
     Component.ScoreBlock(),
     Component.ConditionalRender({
       component: Component.Comments({
-      provider: 'giscus',
-      options: {
-        repo: 'WestRane/notes-web',
-        repoId: 'R_kgDORrnoqQ',
-        category: 'Announcements',
-        categoryId: 'DIC_kwDORrnoqc4C75j0',
-        lang: 'en',
-        mapping: 'pathname'
-      }
+        provider: 'giscus',
+        options: {
+          repo: 'WestRane/notes-web',
+          repoId: 'R_kgDORrnoqQ',
+          category: 'Announcements',
+          categoryId: 'DIC_kwDORrnoqc4C75j0',
+          lang: 'en',
+          mapping: 'pathname'
+        }
       }),
       condition: (page) => {
         const isMainIndex = page.fileData.slug === "index"
@@ -53,23 +53,34 @@ export const defaultContentPageLayout: PageLayout = {
     }),
     Component.SpoilerWarning(),
     Component.ConditionalRender({
-    component: Component.HomePage({
-      intro: "Notes on things I consume and occasionally break",
-      sections: [
-        {
-          type: "list",
-          title: "Latest reviews",
-          path: "reviews",
-          recursive: true,
-          showCategory: true,
-          limit: 10,
-          allLabel: "All reviews →",
-          heading: "Reviews",
-          description: ["Because my memory is short, but the media list is long..."],
-        }
-      ],
-    }),
-    condition: (page) => page.fileData.slug === "index",
+      component: Component.HomePage({
+        intro: "Notes on things I consume and occasionally break",
+        sections: [
+          {
+            type: "list",
+            title: "Recent",
+            heading: "Anime reviews",
+            description: ["Thoughts on what I've watched lately."],
+            path: "reviews/anime",
+            recursive: true,
+            showCategory: false,
+            limit: 5,
+            allLabel: "All anime →",
+          },
+          {
+            type: "list",
+            title: "Recent",
+            heading: "Game reviews",
+            description: ["Thoughts on what I've played lately."],
+            path: "reviews/games",
+            recursive: true,
+            showCategory: false,
+            limit: 5,
+            allLabel: "All games →",
+          },
+        ],
+      }),
+      condition: (page) => page.fileData.slug === "index",
   }),    
   ],
   left: [

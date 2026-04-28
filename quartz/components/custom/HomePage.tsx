@@ -139,7 +139,9 @@ export default ((opts: Options) => {
       pencil.title = "Updated";
       dateEl.appendChild(pencil);
     }
-    dateEl.appendChild(document.createTextNode(p.date || ""));
+    const currentYear = new Date().getFullYear().toString();
+    const yearSuffix = (p.year && p.year !== "—" && p.year !== currentYear) ? " '" + p.year.slice(2) : "";
+    dateEl.appendChild(document.createTextNode((p.date || "") + yearSuffix));
     a.appendChild(dateEl);
 
     return a;
