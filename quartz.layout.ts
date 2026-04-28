@@ -7,7 +7,8 @@ export const sharedPageComponents: SharedLayout = {
   header: [],
   afterBody: [
     Component.ScoreBlock(),
-    Component.Comments({
+    Component.ConditionalRender({
+      component: Component.Comments({
       provider: 'giscus',
       options: {
         repo: 'WestRane/notes-web',
@@ -17,6 +18,12 @@ export const sharedPageComponents: SharedLayout = {
         lang: 'en',
         mapping: 'pathname'
       }
+      }),
+      condition: (page) => {
+        const isMainIndex = page.fileData.slug === "index"
+        const isFolderIndex = page.fileData.slug?.endsWith("/index")
+        return !isMainIndex && !isFolderIndex
+      },
     }),
   ],
   footer: Component.Footer({
