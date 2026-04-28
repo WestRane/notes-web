@@ -15,8 +15,7 @@ export const sharedPageComponents: SharedLayout = {
         category: 'Announcements',
         categoryId: 'DIC_kwDORrnoqc4C75j0',
         lang: 'en',
-        mapping: 'pathname',
-        themeUrl: 'http://localhost:8080/static/giscus'
+        mapping: 'pathname'
       }
     }),
   ],
