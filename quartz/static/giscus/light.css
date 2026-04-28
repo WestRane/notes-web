@@ -88,6 +88,8 @@ main {
   /*! Extensions from @primer/css/alerts/flash.scss */
   --color-social-reaction-bg-hover: var(--color-scale-gray-1);
   --color-social-reaction-bg-reacted-hover: var(--color-scale-blue-1);
+
+  min-height: 200px;
 }
 
 main .pagination-loader-container {
