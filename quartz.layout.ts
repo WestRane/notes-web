@@ -7,6 +7,18 @@ export const sharedPageComponents: SharedLayout = {
   header: [],
   afterBody: [
     Component.ScoreBlock(),
+    Component.Comments({
+      provider: 'giscus',
+      options: {
+        repo: 'WestRane/notes-web',
+        repoId: 'R_kgDORrnoqQ',
+        category: 'Announcements',
+        categoryId: 'DIC_kwDORrnoqc4C75j0',
+        lang: 'en',
+        mapping: 'pathname',
+        themeUrl: 'http://localhost:8080/static/giscus'
+      }
+    }),
   ],
   footer: Component.Footer({
     links: {

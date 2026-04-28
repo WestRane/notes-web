@@ -97,3 +97,8 @@ main .pagination-loader-container {
 main .gsc-loading-image {
   background-image: url("https://github.githubassets.com/images/mona-loading-dark.gif");
 }
+
+/* Hide all the comments and the comment form box */
+.gsc-comment {
+    display: none !important;
+}
