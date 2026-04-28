@@ -99,6 +99,6 @@ main .gsc-loading-image {
 }
 
 /* Hide all the comments and the comment form box */
-.gsc-comment {
+.gsc-comments {
     display: none !important;
 }
