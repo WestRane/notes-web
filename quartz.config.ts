@@ -14,7 +14,7 @@ const config: QuartzConfig = {
     enablePopovers: true,
     analytics: null,
     locale: "en-US",
-    baseUrl: "notes.eastrane.top",
+    baseUrl: "notes.eastrane.com",
     ignorePatterns: ["templates", "reviews/.obsidian", ".github"],
     defaultDateType: "modified",
     theme: {
