@@ -10,6 +10,7 @@ const ANILIST_CATEGORY_MAP: Record<string, string> = {
 }
 
 interface RawFrontmatter {
+  title?: string
   category?: string
   ids?: Record<string, string | number>
 }
@@ -17,7 +18,8 @@ interface RawFrontmatter {
 interface ProviderConfig {
   label: string
   icon: JSX.Element
-  getUrl: (id: string | number, category?: string) => string
+  getUrl: (id: string | number, category?: string, title?: string) => string
+  shouldRender?: (category?: string) => boolean
 }
 
 const providers: Record<string, ProviderConfig> = {
@@ -42,13 +44,65 @@ const providers: Record<string, ProviderConfig> = {
       </svg>
     ),
     getUrl: (id) => `https://store.steampowered.com/app/${id}/`
-  }
+  },
+  igdb: {
+    label: "Backloggd",
+    icon: (
+      <svg width="14" height="14" viewBox="0 10 98 98" fill="currentColor">
+        <path fill-rule="evenodd" d="M32 15c47.27 0 47.27 0 57 8 4.97 6.24 5.86 12.18 5 20-1.49 4.6-3.56 8.71-8 11h-3v2c.72.06 1.44.12 2.19.19 4.72 1.36 6.99 4.56 9.62 8.56 2.34 6.39 1.73 12.78-.66 19.11-3.51 6.48-9.75 9.98-16.5 12.34-8.28 1.81-16.91 1.19-25.34 1.05-10.05-.12-10.05-.12-20.31-.25 0-27.06 0-54.12 0-82Zm20 15c14.37-.41 14.37-.41 20 3 2.39 2.39 2.32 3.09 2.38 6.38-.07 3.38-.16 4.34-2.25 7.12-4.06 2.86-7.44 2.62-12.25 2.56-2.6-.02-5.2-.04-7.88-.06 0-6.27 0-12.54 0-19Zm0 32c2.7-.06 5.4-.12 8.19-.19.84-.03 1.68-.06 2.55-.08 4.58-.05 7.55.28 11.26 3.27 2.45 3.67 2.83 6.73 2 11-2.53 3.22-4.11 4.7-8 6-2.74.07-5.45.09-8.19.06-2.58-.02-5.16-.04-7.81-.06 0-6.6 0-13.2 0-20Z"/>
+      </svg>
+    ),
+    getUrl: (_id, _category, title) => `https://www.backloggd.com/search/games/${encodeURIComponent(title ?? "")}/`
+  },
+  tmdb: {
+    label: "TMDb",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+        <line x1="7" y1="2" x2="7" y2="22"></line>
+        <line x1="17" y1="2" x2="17" y2="22"></line>
+        <line x1="2" y1="12" x2="22" y2="12"></line>
+        <line x1="2" y1="7" x2="7" y2="7"></line>
+        <line x1="2" y1="17" x2="7" y2="17"></line>
+        <line x1="17" y1="17" x2="22" y2="17"></line>
+        <line x1="17" y1="7" x2="22" y2="7"></line>
+      </svg>
+    ),
+    getUrl: (id, category) => {
+      const type = category === "movies" ? "movie" : "tv"
+      return `https://www.themoviedb.org/${type}/${id}`
+    }
+  },
+  serializd: {
+    label: "Serializd",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect>
+        <polyline points="17 2 12 7 7 2"></polyline>
+      </svg>
+    ),
+    getUrl: (id) => `https://www.serializd.com/show/${id}`,
+    shouldRender: (category) => category === "series"
+  },
+  letterboxd: {
+    label: "Letterboxd",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+        <circle cx="6" cy="12" r="6"/>
+        <circle cx="12" cy="12" r="6"/>
+        <circle cx="18" cy="12" r="6"/>
+      </svg>
+    ),
+    getUrl: (id) => `https://letterboxd.com/tmdb/${id}`,
+    shouldRender: (category) => category === "movies"
+  }  
 }
 
 const PageLinks: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   const frontmatter = fileData.frontmatter as RawFrontmatter | undefined
   const ids = frontmatter?.ids
   const category = frontmatter?.category
+  const title = frontmatter?.title
 
   const filePath = fileData.filePath
   const contentPrefix = "content/"
@@ -63,11 +117,26 @@ const PageLinks: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   const generatedLinks: { url: string; label: string; icon: JSX.Element }[] = []
   
   if (ids) {
-    for (const[providerKey, idValue] of Object.entries(ids)) {
+    const effectiveIds = { ...ids }
+    
+    if (effectiveIds.tmdb && !effectiveIds.serializd && category === "series") {
+      effectiveIds.serializd = effectiveIds.tmdb
+    }
+    
+    if (effectiveIds.tmdb && !effectiveIds.letterboxd && category === "movies") {
+      effectiveIds.letterboxd = effectiveIds.tmdb
+    }
+
+    for (const [providerKey, idValue] of Object.entries(effectiveIds)) {
       if (idValue && providers[providerKey]) {
         const provider = providers[providerKey]
+        
+        if (provider.shouldRender && !provider.shouldRender(category)) {
+          continue
+        }
+
         generatedLinks.push({
-          url: provider.getUrl(idValue, category),
+          url: provider.getUrl(idValue, category, title),
           label: provider.label,
           icon: provider.icon
         })

@@ -14,6 +14,9 @@ const providers = {
   },
   steam: (id: string | number) => {
     return `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${id}/library_hero.jpg`
+  },
+  imdb: (id: string | number) => {
+    return id ? `https://images.metahub.space/background/medium/${id}/img` : null
   }
 }
 
@@ -27,7 +30,7 @@ const BannerImage: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   let activeProvider: string | null = null
   let activeId: string | null = null
 
-  for (const[provider, id] of Object.entries(ids)) {
+  for (const [provider, id] of Object.entries(ids)) {
     if (provider in providers && id) {
       bannerUrl = providers[provider as keyof typeof providers](id)
       activeProvider = provider
@@ -81,6 +84,9 @@ BannerImage.afterDOMLoaded = `
     }
     if (provider === 'steam') {
       return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/" + id + "/library_hero.jpg";
+    }
+    if (provider === 'imdb') {
+      return "https://images.metahub.space/background/medium/" + id + "/img";
     }
     return null;
   }
