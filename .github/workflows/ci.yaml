@@ -16,6 +16,8 @@ on:
         description: "Specific AniList IDs to refetch (space-separated)"
         type: string
         default: ""
+  schedule:
+    - cron: '0 0 1 * *'  # Runs automatically on the 1st of every month at midnight
 
 permissions:
   contents: write
@@ -61,6 +63,10 @@ jobs:
           fi
           if [ -n "${{ inputs.ids }}" ]; then
             ARGS="$ARGS ${{ inputs.ids }}"
+          fi
+          # Check for broken links if run by schedule
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            ARGS="$ARGS --check"
           fi
           node ./scripts/fetch-anilist.mjs $ARGS
 
