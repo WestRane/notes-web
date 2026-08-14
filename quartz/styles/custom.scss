@@ -49,3 +49,22 @@ img[alt="|700"] {
   opacity: 0.6;
   line-height: 1;
 }
+
+// Add spacing between separate ToC items
+.toc-content {
+  li {
+    margin-bottom: 0.25rem;
+    a {
+      display: inline-block;
+      line-height: 1.2;
+    }
+
+    &.depth-1 > a {
+      font-weight: 600;
+    }
+
+    &.depth-2 > a {
+      font-weight: 400;
+    }
+  }
+}
