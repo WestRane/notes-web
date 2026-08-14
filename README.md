@@ -15,3 +15,10 @@ Quartz is a set of tools that helps you publish your [digital garden](https://jz
     <img src="https://cdn.jsdelivr.net/gh/jackyzha0/jackyzha0/sponsorkit/sponsors.svg" />
   </a>
 </p>
+
+## Custom instructions for notes-web
+
+- If NodeJS is installed in Scoop, it's better to follow this local dev flow to prevent having errors:
+  - npx pnpm install
+  - npx pnpm approve-builds --all
+  - npm pnpm dev
