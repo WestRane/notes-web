@@ -83,161 +83,81 @@ export default ((opts: Options) => {
         description,
         pages: pages.map((p) => buildPageItem(p, fileData.slug!)),
       }
-    }).filter(Boolean)
+    }).flatMap((s) => (s ? [s] : []))
+
+    const currentYear = new Date().getFullYear().toString()
 
     return (
-      <div
-        class="home-page"
-        id="home-page-root"
-        data-sections={JSON.stringify(sectionsData)}
-        data-intro={opts.intro ?? ""}
-      >
-        <div id="home-page-content"></div>
+      <div class="home-page" id="home-page-root">
+        <div id="home-page-content">
+          {opts.intro && <p class="home-intro">{opts.intro}</p>}
+          {sectionsData.map((section) =>
+            section.type === "link" ? (
+              <div class="home-section">
+                <div class="home-section-header">
+                  <span class="home-section-title">{section.title}</span>
+                </div>
+                <a href={section.href} class="home-link-card">
+                  <span class="home-link-title">{section.title}</span>
+                  {section.description && (
+                    <span class="home-link-desc">{section.description}</span>
+                  )}
+                </a>
+              </div>
+            ) : (
+              <div class="home-section">
+                {section.heading && <h2 class="home-section-heading">{section.heading}</h2>}
+                {section.description?.map((line) => (
+                  <p class="home-section-desc">{line}</p>
+                ))}
+                <div class="home-section-header">
+                  <span class="home-section-title">{section.title}</span>
+                  <a href={section.allHref} class="home-section-all">
+                    {section.allLabel}
+                  </a>
+                </div>
+                <div class="note-list-rows">
+                  {section.pages.map((p) => (
+                    <a
+                      href={p.href}
+                      class="note-list-item"
+                      style="display:flex;flex-direction:row;align-items:center;"
+                    >
+                      {p.score !== undefined && p.status && (
+                        <span class={`note-list-badge ${p.status}`}>{p.score}</span>
+                      )}
+                      <div
+                        class="note-list-left"
+                        style="display:flex;align-items:baseline;flex:1;min-width:0;"
+                      >
+                        <span class="note-list-title">{p.title}</span>
+                      </div>
+                      {section.showCategory && (
+                        <span class="note-list-cat">{p.category ?? ""}</span>
+                      )}
+                      <span class="note-list-date">
+                        {p.hasModified && (
+                          <span class="note-list-date-pencil" title="Updated">
+                            {"✎ "}
+                          </span>
+                        )}
+                        {(p.date ?? "") +
+                          (p.year && p.year !== "—" && p.year !== currentYear
+                            ? " '" + p.year.slice(2)
+                            : "")}
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ),
+          )}
+        </div>
       </div>
     )
   }
 
   HomePage.css = style
-
-  HomePage.afterDOMLoaded = `
-(function() {
-  function renderItem(p, showCategory) {
-    const a = document.createElement("a");
-    a.href = p.href;
-    a.className = "note-list-item";
-    a.style.cssText = "display:flex;flex-direction:row;align-items:center;";
-
-    if (p.score !== undefined && p.status) {
-      const badge = document.createElement("span");
-      badge.className = "note-list-badge " + p.status;
-      badge.textContent = p.score;
-      a.appendChild(badge);
-    }
-
-    const left = document.createElement("div");
-    left.className = "note-list-left";
-    left.style.cssText = "display:flex;align-items:baseline;flex:1;min-width:0;";
-    const titleEl = document.createElement("span");
-    titleEl.className = "note-list-title";
-    titleEl.textContent = p.title;
-    left.appendChild(titleEl);
-    a.appendChild(left);
-
-    if (showCategory) {
-      const catEl = document.createElement("span");
-      catEl.className = "note-list-cat";
-      catEl.textContent = p.category || "";
-      a.appendChild(catEl);
-    }
-
-    const dateEl = document.createElement("span");
-    dateEl.className = "note-list-date";
-    if (p.hasModified) {
-      const pencil = document.createElement("span");
-      pencil.className = "note-list-date-pencil";
-      pencil.textContent = "✎ ";
-      pencil.title = "Updated";
-      dateEl.appendChild(pencil);
-    }
-    const currentYear = new Date().getFullYear().toString();
-    const yearSuffix = (p.year && p.year !== "—" && p.year !== currentYear) ? " '" + p.year.slice(2) : "";
-    dateEl.appendChild(document.createTextNode((p.date || "") + yearSuffix));
-    a.appendChild(dateEl);
-
-    return a;
-  }
-
-  function init() {
-    const root = document.getElementById("home-page-root");
-    if (!root) return;
-
-    const sections = JSON.parse(root.dataset.sections || "[]");
-    const intro = root.dataset.intro || "";
-    const content = document.getElementById("home-page-content");
-    if (!content) return;
-
-    content.innerHTML = "";
-
-    if (intro) {
-      const p = document.createElement("p");
-      p.className = "home-intro";
-      p.textContent = intro;
-      content.appendChild(p);
-    }
-
-    sections.forEach(function(section) {
-      const div = document.createElement("div");
-      div.className = "home-section";
-
-      if (section.type === "link") {
-        const header = document.createElement("div");
-        header.className = "home-section-header";
-        const titleEl = document.createElement("span");
-        titleEl.className = "home-section-title";
-        titleEl.textContent = section.title;
-        header.appendChild(titleEl);
-        div.appendChild(header);
-
-        const card = document.createElement("a");
-        card.href = section.href;
-        card.className = "home-link-card";
-        const cardTitle = document.createElement("span");
-        cardTitle.className = "home-link-title";
-        cardTitle.textContent = section.title;
-        card.appendChild(cardTitle);
-        if (section.description) {
-          const desc = document.createElement("span");
-          desc.className = "home-link-desc";
-          desc.textContent = section.description;
-          card.appendChild(desc);
-        }
-        div.appendChild(card);
-      } else {
-        if (section.heading) {
-          const h = document.createElement("h2");
-          h.className = "home-section-heading";
-          h.textContent = section.heading;
-          div.appendChild(h);
-        }
-
-        if (section.description && section.description.length > 0) {
-          section.description.forEach(function(line) {
-            const p = document.createElement("p");
-            p.className = "home-section-desc";
-            p.textContent = line;
-            div.appendChild(p);
-          });
-        }
-
-        const header = document.createElement("div");
-        header.className = "home-section-header";
-        const titleEl = document.createElement("span");
-        titleEl.className = "home-section-title";
-        titleEl.textContent = section.title;
-        header.appendChild(titleEl);
-        const allLink = document.createElement("a");
-        allLink.href = section.allHref;
-        allLink.className = "home-section-all";
-        allLink.textContent = section.allLabel;
-        header.appendChild(allLink);
-        div.appendChild(header);
-
-        const rows = document.createElement("div");
-        rows.className = "note-list-rows";
-        section.pages.forEach(function(p) {
-          rows.appendChild(renderItem(p, section.showCategory));
-        });
-        div.appendChild(rows);
-      }
-
-      content.appendChild(div);
-    });
-  }
-
-  document.addEventListener("nav", init);
-  init();
-})();
-  `
 
   return HomePage
 }) satisfies QuartzComponentConstructor
