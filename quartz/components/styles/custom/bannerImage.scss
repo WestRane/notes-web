@@ -5,6 +5,7 @@
   overflow: hidden;
   opacity: 0;
   transition: opacity 0.3s ease;
+  background: var(--light);
 
   &.loaded {
     opacity: 1;
@@ -25,4 +26,98 @@
     max-height: unset;
     height: 140px;
   }
+}
+
+.banner-image-inner {
+  transition: opacity 0.6s ease;
+}
+.banner-image.gated .banner-image-inner {
+  opacity: 0;
+}
+.banner-image.ready .banner-image-inner {
+  opacity: 1;
+}
+
+.book-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 4;
+  min-height: 180px;
+  max-height: 220px;
+  background: var(--light);
+
+  @media (max-width: 768px) {
+    aspect-ratio: unset;
+    min-height: unset;
+    max-height: unset;
+    height: 170px;
+  }
+}
+
+.book-hero-bg {
+  position: absolute;
+  inset: -24px;
+  background-size: cover;
+  background-position: center;
+  filter: blur(3.5px) saturate(1.15) brightness(0.872);
+  transform: scale(1.08);
+  opacity: 0.7;
+}
+
+.book-hero-dim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(20, 28, 38, 0.25), rgba(20, 28, 38, 0.5));
+}
+
+.book-hero-cover {
+  position: relative;
+  height: 200px;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  border-radius: 2px 4px 4px 2px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+
+  @media (max-width: 768px) {
+    height: 160px;
+  }
+}
+
+.book-hero-bg,
+.book-hero-cover,
+.book-hero-dim {
+  transition: opacity 0.6s ease;
+}
+.book-hero.gated .book-hero-bg,
+.book-hero.gated .book-hero-cover,
+.book-hero.gated .book-hero-dim {
+  opacity: 0;
+}
+.book-hero.ready .book-hero-dim {
+  opacity: 1;
+}
+.book-hero.ready .book-hero-bg {
+  opacity: 0.7;
+}
+.book-hero.ready .book-hero-cover {
+  opacity: 1;
+}
+.book-hero.cover-missing .book-hero-cover {
+  display: none;
+}
+
+.book-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.16;
+  transition: opacity 0.6s ease;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='0.55'/></svg>");
+}
+.book-hero.gated::after {
+  opacity: 0;
 }

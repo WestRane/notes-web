@@ -4,7 +4,17 @@ import style from ".././styles/custom/bannerImage.scss"
 import anilistData from "../../static/data/anilist.json"
 
 interface RawFrontmatter {
+  title?: string
+  category?: string
   ids?: Record<string, string | number>
+}
+
+const openlibraryCover = (ids: Record<string, string | number>) => {
+  const ol = ids.openlibrary
+  if (ol) return `https://covers.openlibrary.org/b/olid/${ol}-L.jpg`
+  const isbn = ids.isbn
+  if (isbn) return `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`
+  return null
 }
 
 const providers = {
@@ -25,6 +35,28 @@ const BannerImage: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   const ids = frontmatter?.ids
 
   if (!ids) return null
+
+  if (frontmatter?.category === "books") {
+    const coverUrl = openlibraryCover(ids)
+    if (!coverUrl) return null
+
+    return (
+      <div class="banner-image book-hero loaded" data-cover={coverUrl}>
+        <div
+          class="book-hero-bg"
+          style={`background-image: url(${coverUrl})`}
+        ></div>
+        <div class="book-hero-dim"></div>
+        <img
+          class="book-hero-cover"
+          src={coverUrl}
+          alt=""
+          loading="eager"
+          fetchpriority="high"
+        />
+      </div>
+    )
+  }
 
   let bannerUrl: string | null = null
   let activeProvider: string | null = null
@@ -91,33 +123,81 @@ BannerImage.afterDOMLoaded = `
     return null;
   }
 
-  async function init() {
-    const root = document.getElementById("banner-image-root");
-    if (!root) return;
+  async function bgUrlFromStyle(el) {
+    const m = /url\(["']?([^"')]+)["']?\)/.exec(el.style.backgroundImage || "")
+    return m ? m[1] : null
+  }
 
-    const provider = root.dataset.provider;
-    const id = root.dataset.providerId;
-    if (!provider || !id) return;
+  function preload(src) {
+    return new Promise((resolve) => {
+      let settled = false
+      const done = (ok) => {
+        if (!settled) {
+          settled = true
+          resolve(ok)
+        }
+      }
+      const img = new Image()
+      img.onload = () => done(true)
+      img.onerror = () => done(false)
+      img.src = src
+      if (img.complete && img.naturalWidth > 0) done(true)
+      setTimeout(() => done(false), 10000)
+    })
+  }
 
-    const inner = document.getElementById("banner-image-inner");
-    if (!inner) return;
+  async function initClassic() {
+    const root = document.getElementById("banner-image-root")
+    if (!root) return
 
-    if (inner.style.backgroundImage) {
-      root.style.display = "";
-      root.classList.add("loaded");
-      return;
+    const inner = document.getElementById("banner-image-inner")
+    if (!inner) return
+
+    let url = await bgUrlFromStyle(inner)
+
+    if (!url) {
+      const provider = root.dataset.provider
+      const id = root.dataset.providerId
+      if (!provider || !id) return
+
+      url = await getBannerUrl(provider, id)
+
+      if (!url) {
+        root.style.display = "none"
+        return
+      }
+
+      inner.style.backgroundImage = 'url("' + url + '")'
     }
 
-    const bannerUrl = await getBannerUrl(provider, id);
+    root.style.display = ""
+    root.classList.add("gated")
+    await preload(url)
+    root.classList.remove("gated")
+    root.classList.add("loaded", "ready")
+  }
 
-    if (!bannerUrl) {
-      root.style.display = "none";
-      return;
+  async function initBooks() {
+    const heroes = document.querySelectorAll(".book-hero[data-cover]")
+    for (const hero of heroes) {
+      const cover = hero.getAttribute("data-cover")
+      if (!cover) continue
+
+      hero.classList.add("gated")
+      const ok = await preload(cover)
+      hero.classList.remove("gated")
+      hero.classList.add("ready")
+      if (!ok) {
+        const img = hero.querySelector(".book-hero-cover")
+        if (img && !img.complete) hero.classList.add("cover-missing")
+        else if (img && img.naturalWidth === 0) hero.classList.add("cover-missing")
+      }
     }
+  }
 
-    root.style.display = "";
-    inner.style.backgroundImage = "url(" + bannerUrl + ")";
-    root.classList.add("loaded");
+  function init() {
+    initClassic()
+    initBooks()
   }
 
   document.addEventListener("nav", init);
