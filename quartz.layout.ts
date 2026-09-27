@@ -28,7 +28,10 @@ export const sharedPageComponents: SharedLayout = {
   ],
   footer: Component.Footer({
     links: {
+      Discord: "https://discord.gg/2cjUKYkPjE",
       AniList: "https://anilist.co/user/EastRane/",
+      Serializd: "https://www.serializd.com/user/EastRane",
+      Letterboxd: "https://letterboxd.com/EastRane/",
     },
   }),
 }
@@ -58,7 +61,7 @@ export const defaultContentPageLayout: PageLayout = {
         description:
           "Hello, it's me. As for who I am... well, if you know, you know. I write reviews and notes on stuff like anime, games, shows, books and other media — mostly for myself, but feel free to browse around. \nAlways down to chat, so feel free to reach out if you want to talk about reviews, shows or just hang out.",
         stats: true,
-        recent: { title: "Recent reviews", limit: 50 },
+        recent: { title: "Recent updates", limit: 20 },
         random: true,
         shelfIndex: true,
       }),
