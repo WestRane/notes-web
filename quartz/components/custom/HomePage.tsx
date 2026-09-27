@@ -3,154 +3,315 @@ import { resolveRelative, FullSlug } from "../../util/path"
 import { QuartzPluginData } from "../../plugins/vfile"
 import style from ".././styles/custom/homePage.scss"
 import { buildPageItem, RawFrontmatter } from "./NoteList"
-
-interface ListSection {
-  type: "list"
-  title: string
-  path: string
-  limit?: number
-  recursive?: boolean
-  showCategory?: boolean
-  allLabel?: string
-  heading?: string
-  description?: string | string[]
-}
-
-interface LinkSection {
-  type: "link"
-  title: string
-  path: string
-  description?: string
-}
-
-type Section = ListSection | LinkSection
+import anilistData from "../../static/data/anilist.json"
+import { readFileSync } from "fs"
 
 interface Options {
   intro?: string
-  sections: Section[]
+  description?: string
+  stats?: boolean
+  recent?: {
+    title?: string
+    limit?: number
+  }
+  random?: boolean
+  shelfIndex?: boolean
+}
+
+type FrontmatterWithIds = RawFrontmatter & { ids?: Record<string, string | number> }
+
+const CATEGORY_ORDER = ["anime", "manga", "ranobe", "games", "series", "books", "movies"]
+
+function isReviewPage(p: QuartzPluginData): boolean {
+  return !!p.slug && p.slug.startsWith("reviews/") && !p.slug.endsWith("/index")
+}
+
+function pageDate(p: QuartzPluginData): string {
+  const fm = p.frontmatter as RawFrontmatter | undefined
+  return fm?.modified ?? fm?.created ?? ""
+}
+
+function sortByDateDesc(a: QuartzPluginData, b: QuartzPluginData): number {
+  return pageDate(b).localeCompare(pageDate(a))
+}
+
+function firstHeading(p: QuartzPluginData): string | null {
+  const fp = (p as { filePath?: string }).filePath
+  if (!fp) return null
+  try {
+    const lines = readFileSync(fp, "utf-8").split("\n").slice(0, 60)
+    for (const line of lines) {
+      const m = /^##\s+(.+?)\s*$/.exec(line.trim())
+      if (m) return m[1].replace(/[*_`]/g, "")
+    }
+  } catch {
+    return null
+  }
+  return null
+}
+
+function resolveCover(p: QuartzPluginData): string | null {
+  const fm = p.frontmatter as FrontmatterWithIds | undefined
+  const ids = fm?.ids
+  if (!ids) return null
+  if (fm?.category === "books") {
+    if (ids.openlibrary) return `https://covers.openlibrary.org/b/olid/${ids.openlibrary}-L.jpg`
+    if (ids.isbn) return `https://covers.openlibrary.org/b/isbn/${ids.isbn}-L.jpg`
+    return null
+  }
+  if (ids.anilist) {
+    const entry = (anilistData as Record<string, { cover?: string }>)[String(ids.anilist)]
+    if (entry?.cover) return entry.cover
+  }
+  return null
+}
+
+function resolveBanner(p: QuartzPluginData): string | null {
+  const fm = p.frontmatter as FrontmatterWithIds | undefined
+  const ids = fm?.ids
+  if (!ids) return null
+  if (ids.anilist) {
+    const entry = (anilistData as Record<string, { banner?: string }>)[String(ids.anilist)]
+    if (entry?.banner) return entry.banner
+  }
+  if (ids.steam) {
+    return `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${ids.steam}/library_hero.jpg`
+  }
+  if (ids.imdb) {
+    return `https://images.metahub.space/background/medium/${ids.imdb}/img`
+  }
+  return null
 }
 
 export default ((opts: Options) => {
   const HomePage: QuartzComponent = ({ allFiles, fileData }: QuartzComponentProps) => {
     if (fileData.slug !== "index") return null
 
-    const sectionsData = opts.sections.map((section) => {
-      if (section.type === "link") {
-        const page = allFiles.find((f) => f.slug === section.path || f.slug === section.path + "/index")
-        if (!page && !section.description) return null
-        return {
-          type: "link" as const,
-          title: section.title,
-          href: resolveRelative(fileData.slug!, (section.path + "/index") as FullSlug),
-          description: section.description ?? null,
-        }
-      }
+    const reviewPages = allFiles.filter(isReviewPage) as QuartzPluginData[]
 
-      const limit = section.limit ?? 5
-      const showCategory = section.showCategory ?? section.recursive ?? false
-
-      const pages = allFiles
-        .filter((f) => {
-          if (!f.slug) return false
-          if (f.slug.endsWith("/index")) return false
-          if (section.recursive) return f.slug.startsWith(section.path + "/")
-          return (
-            f.slug.startsWith(section.path + "/") &&
-            !f.slug.slice(section.path.length + 1).includes("/")
-          )
-        })
-        .sort((a, b) => {
-          const dateA = (a.frontmatter as RawFrontmatter)?.modified ?? (a.frontmatter as RawFrontmatter)?.created ?? ""
-          const dateB = (b.frontmatter as RawFrontmatter)?.modified ?? (b.frontmatter as RawFrontmatter)?.created ?? ""
-          return dateB.localeCompare(dateA)
-        })
-        .slice(0, limit) as QuartzPluginData[]
-
-      if (pages.length === 0) return null
-
-      const allLabel = section.allLabel ?? "All " + section.title.toLowerCase() + " →"
-      const description = section.description
-        ? (Array.isArray(section.description) ? section.description : [section.description])
+    const statsData =
+      opts.stats === true
+        ? (() => {
+            const tagsOf = (p: QuartzPluginData) => (p.frontmatter as RawFrontmatter)?.tags ?? []
+            const typeCount = (t: string) => reviewPages.filter((p) => tagsOf(p).includes(t)).length
+            const types = [
+              { label: "reviews", count: typeCount("review") },
+              { label: "notes", count: typeCount("note") },
+              { label: "logs", count: typeCount("log") },
+            ].filter((t) => t.count > 0)
+            if (types.length === 0) return null
+            return { types }
+          })()
         : null
 
-      return {
-        type: "list" as const,
-        title: section.title,
-        allHref: resolveRelative(fileData.slug!, (section.path + "/index") as FullSlug),
-        allLabel,
-        showCategory,
-        heading: section.heading ?? null,
-        description,
-        pages: pages.map((p) => buildPageItem(p, fileData.slug!)),
-      }
-    }).flatMap((s) => (s ? [s] : []))
+    const recentData = opts.recent
+      ? (() => {
+          const limit = opts.recent.limit ?? 6
+          const latest = reviewPages
+            .filter((p) =>
+              ((p.frontmatter as RawFrontmatter)?.tags ?? []).some((t) =>
+                ["review", "note"].includes(t),
+              ),
+            )
+            .sort(sortByDateDesc)
+            .slice(0, limit)
+          if (latest.length === 0) return null
+          return {
+            title: opts.recent.title ?? "Latest",
+            cards: latest.map((p) => {
+              const item = buildPageItem(p, fileData.slug!)
+              const yearSuffix = item.year && item.year !== "—" ? ` ${item.year}` : ""
+              const dateLabel = `${item.date ?? ""}${yearSuffix}`.trim() || null
+              return {
+                item,
+                cover: resolveBanner(p) ?? resolveCover(p),
+                date: dateLabel,
+                tagline: firstHeading(p),
+              }
+            }),
+          }
+        })()
+      : null
 
-    const currentYear = new Date().getFullYear().toString()
+    const randomData = opts.random
+      ? (() => {
+          const pool = reviewPages
+            .filter((p) =>
+              ((p.frontmatter as RawFrontmatter)?.tags ?? []).some((t) =>
+                ["review", "note"].includes(t),
+              ),
+            )
+            .map((p) => {
+              const item = {
+                ...buildPageItem(p, fileData.slug!),
+                cover: resolveBanner(p) ?? resolveCover(p),
+              }
+              const yearSuffix = item.year && item.year !== "—" ? ` ${item.year}` : ""
+              const dateLabel = `${item.date ?? ""}${yearSuffix}`.trim() || null
+              return { ...item, tagline: firstHeading(p), sub: dateLabel }
+            })
+          if (pool.length === 0) return null
+          const now = new Date()
+          const fallback = pool[(now.getFullYear() + now.getMonth()) % pool.length]
+          return { pool, fallback }
+        })()
+      : null
+
+    const shelfData = opts.shelfIndex
+      ? CATEGORY_ORDER.map((category) => {
+          const inCat = reviewPages.filter(
+            (p) => (p.frontmatter as RawFrontmatter)?.category === category,
+          )
+          if (inCat.length === 0) return null
+          const scored = inCat
+            .map((p) => (p.frontmatter as RawFrontmatter)?.score)
+            .filter((s): s is number => s !== undefined)
+          const avg =
+            scored.length > 0
+              ? (scored.reduce((a, b) => a + b, 0) / scored.length).toFixed(1)
+              : null
+          const recent = [...inCat].sort(sortByDateDesc)[0]
+          const recentItem = buildPageItem(recent, fileData.slug!)
+          const buckets = Array.from(
+            { length: 10 },
+            (_, i) =>
+              inCat.filter((p) => (p.frontmatter as RawFrontmatter)?.score === i + 1).length,
+          )
+          return {
+            category,
+            count: inCat.length,
+            avg,
+            buckets,
+            max: Math.max(...buckets, 1),
+            updated:
+              (recentItem.date ?? "") +
+              (recentItem.year && recentItem.year !== "—" ? ` '${recentItem.year.slice(2)}` : ""),
+            href: resolveRelative(fileData.slug!, `reviews/${category}/index` as FullSlug),
+          }
+        })
+          .flatMap((s) => (s ? [s] : []))
+          .sort((a, b) => b.count - a.count)
+      : null
 
     return (
-      <div class="home-page" id="home-page-root">
-        <div id="home-page-content">
-          {opts.intro && <p class="home-intro">{opts.intro}</p>}
-          {sectionsData.map((section) =>
-            section.type === "link" ? (
-              <div class="home-section">
-                <div class="home-section-header">
-                  <span class="home-section-title">{section.title}</span>
-                </div>
-                <a href={section.href} class="home-link-card">
-                  <span class="home-link-title">{section.title}</span>
-                  {section.description && (
-                    <span class="home-link-desc">{section.description}</span>
-                  )}
-                </a>
+      <div class="home-page">
+        {opts.intro && <p class="home-intro">{opts.intro}</p>}
+        {opts.description && (
+          <p class="home-description">
+            {opts.description
+              .split("\n")
+              .flatMap((line, i) => (i === 0 ? [line] : [<br key={i} />, line]))}
+          </p>
+        )}
+        <div class="home-group">
+          <h2 class="home-group-heading">Reviews</h2>
+          {statsData && (
+            <div class="home-stats">
+              {statsData.types.map((t) => (
+                <span class="home-stat-type">
+                  <b>{t.count}</b> {t.label}
+                </span>
+              ))}
+            </div>
+          )}
+          {shelfData && shelfData.length > 0 && (
+            <div class="home-section">
+              <div class="home-section-header">
+                <span class="home-section-title">Browse shelves</span>
               </div>
-            ) : (
-              <div class="home-section">
-                {section.heading && <h2 class="home-section-heading">{section.heading}</h2>}
-                {section.description?.map((line) => (
-                  <p class="home-section-desc">{line}</p>
-                ))}
-                <div class="home-section-header">
-                  <span class="home-section-title">{section.title}</span>
-                  <a href={section.allHref} class="home-section-all">
-                    {section.allLabel}
-                  </a>
-                </div>
-                <div class="note-list-rows">
-                  {section.pages.map((p) => (
-                    <a
-                      href={p.href}
-                      class="note-list-item"
-                      style="display:flex;flex-direction:row;align-items:center;"
-                    >
-                      {p.score !== undefined && p.status && (
-                        <span class={`note-list-badge ${p.status}`}>{p.score}</span>
-                      )}
-                      <div
-                        class="note-list-left"
-                        style="display:flex;align-items:baseline;flex:1;min-width:0;"
-                      >
-                        <span class="note-list-title">{p.title}</span>
-                      </div>
-                      {section.showCategory && (
-                        <span class="note-list-cat">{p.category ?? ""}</span>
-                      )}
-                      <span class="note-list-date">
-                        {p.hasModified && (
-                          <span class="note-list-date-pencil" title="Updated">
-                            {"✎ "}
-                          </span>
-                        )}
-                        {(p.date ?? "") +
-                          (p.year && p.year !== "—" && p.year !== currentYear
-                            ? " '" + p.year.slice(2)
-                            : "")}
+              <div class="home-shelves">
+                {shelfData.map((s) => (
+                  <a href={s.href} class="home-shelf-card">
+                    <span class="home-shelf-head">
+                      <span class="home-shelf-name">{s.category}</span>
+                      <span class="home-shelf-meta">
+                        {s.count}
+                        {s.avg ? ` · avg ${s.avg}` : ""}
                       </span>
-                    </a>
-                  ))}
-                </div>
+                    </span>
+                    {s.updated && <span class="home-shelf-updated">Updated {s.updated}</span>}
+                    <span class="home-dist-bars home-shelf-bars">
+                      {s.buckets.map((b, i) => (
+                        <span class="home-shelf-col" title={`${s.category} scored ${i + 1}: ${b}`}>
+                          <span
+                            class="home-dist-bar"
+                            style={`height:${Math.max(3, Math.round((b / s.max) * 22))}px;opacity:${b === 0 ? 0.12 : 0.45 + 0.55 * (b / s.max)}`}
+                            title={`${s.category} scored ${i + 1}: ${b}`}
+                          />
+                          <span class="home-shelf-tick">{i + 1}</span>
+                        </span>
+                      ))}
+                    </span>
+                  </a>
+                ))}
               </div>
-            ),
+            </div>
+          )}
+          {recentData && (
+            <div class="home-section">
+              <div class="home-section-header">
+                <span class="home-section-title">{recentData.title}</span>
+              </div>
+              <div class="home-recent">
+                {recentData.cards.map(({ item, cover, date, tagline }) => (
+                  <a href={item.href} class="home-recent-card">
+                    {cover && (
+                      <span class="home-recent-art">
+                        <img src={cover} alt="" loading="lazy" />
+                      </span>
+                    )}
+                    <span class="home-recent-body">
+                      {date && <span class="home-recent-date">{date}</span>}
+                      <span class="home-recent-title">{item.title}</span>
+                      {tagline && <span class="home-recent-tagline">{tagline}</span>}
+                      <span class="home-meta">
+                        {item.score !== undefined && item.status && (
+                          <span class={`note-list-badge ${item.status}`}>{item.score}</span>
+                        )}
+                        {item.category && <span class="home-badge">{item.category}</span>}
+                        {item.locale && <span class="home-badge">{item.locale}</span>}
+                      </span>
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+          {randomData && (
+            <div class="home-section" id="home-random" data-pool={JSON.stringify(randomData.pool)}>
+              <div class="home-section-header">
+                <span class="home-section-title">Random review</span>
+              </div>
+              <a href={randomData.fallback.href} class="home-random-card">
+                {randomData.fallback.cover && (
+                  <span class="home-random-art">
+                    <img src={randomData.fallback.cover} alt="" loading="lazy" />
+                  </span>
+                )}
+                <span class="home-random-body">
+                  {randomData.fallback.sub && (
+                    <span class="home-random-date">{randomData.fallback.sub}</span>
+                  )}
+                  <span class="home-random-title">{randomData.fallback.title}</span>
+                  {randomData.fallback.tagline && (
+                    <span class="home-random-tagline">{randomData.fallback.tagline}</span>
+                  )}
+                  <span class="home-meta">
+                    {randomData.fallback.score !== undefined && randomData.fallback.status && (
+                      <span class={`note-list-badge ${randomData.fallback.status}`}>
+                        {randomData.fallback.score}
+                      </span>
+                    )}
+                    {randomData.fallback.category && (
+                      <span class="home-badge">{randomData.fallback.category}</span>
+                    )}
+                    {randomData.fallback.locale && (
+                      <span class="home-badge">{randomData.fallback.locale}</span>
+                    )}
+                  </span>
+                </span>
+              </a>
+            </div>
           )}
         </div>
       </div>
@@ -158,6 +319,85 @@ export default ((opts: Options) => {
   }
 
   HomePage.css = style
+
+  HomePage.afterDOMLoaded = `
+(function() {
+  function render(root, pick) {
+    var card = root.querySelector(".home-random-card");
+    if (!card || !pick) return;
+    card.setAttribute("href", pick.href);
+    var art = card.querySelector(".home-random-art");
+    var img = card.querySelector(".home-random-art img");
+    if (pick.cover) {
+      if (art) art.style.display = "";
+      if (img) img.setAttribute("src", pick.cover);
+    } else if (art) {
+      art.style.display = "none";
+    }
+    var dateEl = card.querySelector(".home-random-date");
+    if (pick.sub) {
+      if (!dateEl) {
+        dateEl = document.createElement("span");
+        dateEl.className = "home-random-date";
+        card.querySelector(".home-random-body").prepend(dateEl);
+      }
+      dateEl.textContent = pick.sub;
+      dateEl.style.display = "";
+    } else if (dateEl) {
+      dateEl.style.display = "none";
+    }
+    var title = card.querySelector(".home-random-title");
+    if (title) title.textContent = pick.title;
+    var tagline = card.querySelector(".home-random-tagline");
+    if (tagline) {
+      if (pick.tagline) {
+        tagline.textContent = pick.tagline;
+        tagline.style.display = "";
+      } else {
+        tagline.style.display = "none";
+      }
+    }
+    var meta = card.querySelector(".home-meta");
+    if (meta) {
+      meta.innerHTML = "";
+      if (pick.score !== undefined && pick.status) {
+        var badge = document.createElement("span");
+        badge.className = "note-list-badge " + pick.status;
+        badge.textContent = pick.score;
+        meta.appendChild(badge);
+      }
+      if (pick.category) {
+        var cat = document.createElement("span");
+        cat.className = "home-badge";
+        cat.textContent = pick.category;
+        meta.appendChild(cat);
+      }
+      if (pick.locale) {
+        var lang = document.createElement("span");
+        lang.className = "home-badge";
+        lang.textContent = pick.locale;
+        meta.appendChild(lang);
+      }
+    }
+  }
+
+  function init() {
+    var root = document.getElementById("home-random");
+    if (!root) return;
+    var pool = [];
+    try {
+      pool = JSON.parse(root.dataset.pool || "[]");
+    } catch (e) {
+      return;
+    }
+    if (!pool.length) return;
+    render(root, pool[Math.floor(Math.random() * pool.length)]);
+  }
+
+  document.addEventListener("nav", init);
+  init();
+})();
+  `
 
   return HomePage
 }) satisfies QuartzComponentConstructor

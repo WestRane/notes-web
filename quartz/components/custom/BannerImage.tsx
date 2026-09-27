@@ -4,7 +4,6 @@ import style from ".././styles/custom/bannerImage.scss"
 import anilistData from "../../static/data/anilist.json"
 
 interface RawFrontmatter {
-  title?: string
   category?: string
   ids?: Record<string, string | number>
 }
@@ -27,7 +26,7 @@ const providers = {
   },
   imdb: (id: string | number) => {
     return id ? `https://images.metahub.space/background/medium/${id}/img` : null
-  }
+  },
 }
 
 const BannerImage: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
@@ -41,19 +40,17 @@ const BannerImage: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
     if (!coverUrl) return null
 
     return (
-      <div class="banner-image book-hero loaded" data-cover={coverUrl}>
-        <div
-          class="book-hero-bg"
-          style={`background-image: url(${coverUrl})`}
-        ></div>
+      <div class="banner-image book-hero loaded gated" data-cover={coverUrl}>
+        <div class="book-hero-bg" style={`background-image: url(${coverUrl})`}></div>
         <div class="book-hero-dim"></div>
-        <img
-          class="book-hero-cover"
-          src={coverUrl}
-          alt=""
-          loading="eager"
-          fetchpriority="high"
-        />
+        <img class="book-hero-cover" src={coverUrl} alt="" loading="eager" fetchpriority="high" />
+        <noscript>
+          <style>
+            {
+              ".book-hero.gated .book-hero-bg{opacity:.7}.book-hero.gated .book-hero-cover,.book-hero.gated .book-hero-dim{opacity:1}.book-hero.gated::after{opacity:.16}"
+            }
+          </style>
+        </noscript>
       </div>
     )
   }
@@ -81,13 +78,10 @@ const BannerImage: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
       id="banner-image-root"
       data-provider={activeProvider}
       data-provider-id={activeId}
+      data-banner={bannerUrl ?? ""}
       style={!bannerUrl ? "display:none" : ""}
     >
-      <div
-        class="banner-image-inner"
-        id="banner-image-inner"
-        style={innerStyle}
-      ></div>
+      <div class="banner-image-inner" id="banner-image-inner" style={innerStyle}></div>
     </div>
   )
 }
@@ -123,11 +117,6 @@ BannerImage.afterDOMLoaded = `
     return null;
   }
 
-  async function bgUrlFromStyle(el) {
-    const m = /url\(["']?([^"')]+)["']?\)/.exec(el.style.backgroundImage || "")
-    return m ? m[1] : null
-  }
-
   function preload(src) {
     return new Promise((resolve) => {
       let settled = false
@@ -153,7 +142,7 @@ BannerImage.afterDOMLoaded = `
     const inner = document.getElementById("banner-image-inner")
     if (!inner) return
 
-    let url = await bgUrlFromStyle(inner)
+    let url = root.dataset.banner || null
 
     if (!url) {
       const provider = root.dataset.provider
@@ -172,7 +161,11 @@ BannerImage.afterDOMLoaded = `
 
     root.style.display = ""
     root.classList.add("gated")
-    await preload(url)
+    const ok = await preload(url)
+    if (!ok) {
+      root.style.display = "none"
+      return
+    }
     root.classList.remove("gated")
     root.classList.add("loaded", "ready")
   }
@@ -183,14 +176,30 @@ BannerImage.afterDOMLoaded = `
       const cover = hero.getAttribute("data-cover")
       if (!cover) continue
 
-      hero.classList.add("gated")
-      const ok = await preload(cover)
-      hero.classList.remove("gated")
-      hero.classList.add("ready")
-      if (!ok) {
-        const img = hero.querySelector(".book-hero-cover")
-        if (img && !img.complete) hero.classList.add("cover-missing")
-        else if (img && img.naturalWidth === 0) hero.classList.add("cover-missing")
+      // Hot asset: reveal instantly with no fade. Cold asset: keep the
+      // gentle fade-in while it downloads. 80ms splits the two reliably:
+      // cache hits resolve well under a frame budget, network never does.
+      const SLOW = "slow"
+      const result = await Promise.race([
+        preload(cover),
+        new Promise((resolve) => setTimeout(() => resolve(SLOW), 80)),
+      ])
+      if (result === SLOW) {
+        const ok = await preload(cover)
+        if (!ok) {
+          hero.style.display = "none"
+          continue
+        }
+        hero.classList.remove("gated")
+        hero.classList.add("ready")
+      } else {
+        if (!result) {
+          hero.style.display = "none"
+          continue
+        }
+        hero.classList.add("no-anim")
+        hero.classList.remove("gated")
+        hero.classList.add("ready")
       }
     }
   }

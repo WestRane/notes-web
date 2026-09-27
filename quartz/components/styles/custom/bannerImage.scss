@@ -95,6 +95,12 @@
 .book-hero.gated .book-hero-dim {
   opacity: 0;
 }
+.book-hero.no-anim .book-hero-bg,
+.book-hero.no-anim .book-hero-cover,
+.book-hero.no-anim .book-hero-dim,
+.book-hero.no-anim::after {
+  transition: none;
+}
 .book-hero.ready .book-hero-dim {
   opacity: 1;
 }
