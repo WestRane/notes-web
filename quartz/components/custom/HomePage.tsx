@@ -4,7 +4,6 @@ import { QuartzPluginData } from "../../plugins/vfile"
 import style from ".././styles/custom/homePage.scss"
 import { buildPageItem, RawFrontmatter } from "./NoteList"
 import anilistData from "../../static/data/anilist.json"
-import { readFileSync } from "fs"
 
 interface Options {
   intro?: string
@@ -33,21 +32,6 @@ function pageDate(p: QuartzPluginData): string {
 
 function sortByDateDesc(a: QuartzPluginData, b: QuartzPluginData): number {
   return pageDate(b).localeCompare(pageDate(a))
-}
-
-function firstHeading(p: QuartzPluginData): string | null {
-  const fp = (p as { filePath?: string }).filePath
-  if (!fp) return null
-  try {
-    const lines = readFileSync(fp, "utf-8").split("\n").slice(0, 60)
-    for (const line of lines) {
-      const m = /^##\s+(.+?)\s*$/.exec(line.trim())
-      if (m) return m[1].replace(/[*_`]/g, "")
-    }
-  } catch {
-    return null
-  }
-  return null
 }
 
 function resolveCover(p: QuartzPluginData): string | null {
@@ -126,7 +110,8 @@ export default ((opts: Options) => {
                 item,
                 cover: resolveBanner(p) ?? resolveCover(p),
                 date: dateLabel,
-                tagline: firstHeading(p),
+                dateISO: pageDate(p) || null,
+                tagline: (p.frontmatter as RawFrontmatter)?.tagline ?? null,
               }
             }),
           }
@@ -148,7 +133,12 @@ export default ((opts: Options) => {
               }
               const yearSuffix = item.year && item.year !== "—" ? ` ${item.year}` : ""
               const dateLabel = `${item.date ?? ""}${yearSuffix}`.trim() || null
-              return { ...item, tagline: firstHeading(p), sub: dateLabel }
+              return {
+                ...item,
+                tagline: (p.frontmatter as RawFrontmatter)?.tagline ?? null,
+                sub: dateLabel,
+                dateISO: pageDate(p) || null,
+              }
             })
           if (pool.length === 0) return null
           const now = new Date()
@@ -185,7 +175,8 @@ export default ((opts: Options) => {
             max: Math.max(...buckets, 1),
             updated:
               (recentItem.date ?? "") +
-              (recentItem.year && recentItem.year !== "—" ? ` '${recentItem.year.slice(2)}` : ""),
+              (recentItem.year && recentItem.year !== "—" ? ` ${recentItem.year}` : ""),
+            updatedISO: pageDate(recent) || null,
             href: resolveRelative(fileData.slug!, `reviews/${category}/index` as FullSlug),
           }
         })
@@ -229,7 +220,11 @@ export default ((opts: Options) => {
                         {s.avg ? ` · avg ${s.avg}` : ""}
                       </span>
                     </span>
-                    {s.updated && <span class="home-shelf-updated">Updated {s.updated}</span>}
+                    {s.updated && (
+                      <span class="home-shelf-updated">
+                        Updated <span data-rel-date={s.updatedISO ?? undefined}>{s.updated}</span>
+                      </span>
+                    )}
                     <span class="home-dist-bars home-shelf-bars">
                       {s.buckets.map((b, i) => (
                         <span class="home-shelf-col" title={`${s.category} scored ${i + 1}: ${b}`}>
@@ -253,7 +248,7 @@ export default ((opts: Options) => {
                 <span class="home-section-title">{recentData.title}</span>
               </div>
               <div class="home-recent">
-                {recentData.cards.map(({ item, cover, date, tagline }) => (
+                {recentData.cards.map(({ item, cover, date, dateISO, tagline }) => (
                   <a href={item.href} class="home-recent-card">
                     {cover && (
                       <span class="home-recent-art">
@@ -261,9 +256,19 @@ export default ((opts: Options) => {
                       </span>
                     )}
                     <span class="home-recent-body">
-                      {date && <span class="home-recent-date">{date}</span>}
-                      <span class="home-recent-title">{item.title}</span>
-                      {tagline && <span class="home-recent-tagline">{tagline}</span>}
+                      {date && (
+                        <span class="home-recent-date" data-rel-date={dateISO ?? undefined}>
+                          {date}
+                        </span>
+                      )}
+                      <span class="home-recent-title" title={item.title}>
+                        {item.title}
+                      </span>
+                      {tagline && (
+                        <span class="home-recent-tagline" title={tagline}>
+                          {tagline}
+                        </span>
+                      )}
                       <span class="home-meta">
                         {item.score !== undefined && item.status && (
                           <span class={`note-list-badge ${item.status}`}>{item.score}</span>
@@ -292,9 +297,13 @@ export default ((opts: Options) => {
                   {randomData.fallback.sub && (
                     <span class="home-random-date">{randomData.fallback.sub}</span>
                   )}
-                  <span class="home-random-title">{randomData.fallback.title}</span>
+                  <span class="home-random-title" title={randomData.fallback.title}>
+                    {randomData.fallback.title}
+                  </span>
                   {randomData.fallback.tagline && (
-                    <span class="home-random-tagline">{randomData.fallback.tagline}</span>
+                    <span class="home-random-tagline" title={randomData.fallback.tagline}>
+                      {randomData.fallback.tagline}
+                    </span>
                   )}
                   <span class="home-meta">
                     {randomData.fallback.score !== undefined && randomData.fallback.status && (
@@ -322,6 +331,22 @@ export default ((opts: Options) => {
 
   HomePage.afterDOMLoaded = `
 (function() {
+  var REL_DAY_LIMIT = 32;
+  function rel(dateStr) {
+    if (!dateStr) return null;
+    var then = new Date(dateStr).getTime();
+    if (isNaN(then)) return null;
+    var days = Math.floor((Date.now() - then) / 86400000);
+    if (days < 0 || days >= REL_DAY_LIMIT) return null;
+    if (days === 0) return "today";
+    if (days === 1) return "yesterday";
+    return days + " days ago";
+  }
+  function tipIfClamped(el) {
+    if (!el) return;
+    if (el.scrollHeight > el.clientHeight + 1) el.setAttribute("title", el.textContent);
+    else el.removeAttribute("title");
+  }
   function render(root, pick) {
     var card = root.querySelector(".home-random-card");
     if (!card || !pick) return;
@@ -335,19 +360,25 @@ export default ((opts: Options) => {
       art.style.display = "none";
     }
     var dateEl = card.querySelector(".home-random-date");
-    if (pick.sub) {
+    var label = rel(pick.dateISO) || pick.sub;
+    if (label) {
       if (!dateEl) {
         dateEl = document.createElement("span");
         dateEl.className = "home-random-date";
         card.querySelector(".home-random-body").prepend(dateEl);
       }
-      dateEl.textContent = pick.sub;
+      dateEl.textContent = label;
+      if (pick.sub && label !== pick.sub) dateEl.setAttribute("title", pick.sub);
+      else dateEl.removeAttribute("title");
       dateEl.style.display = "";
     } else if (dateEl) {
       dateEl.style.display = "none";
     }
     var title = card.querySelector(".home-random-title");
-    if (title) title.textContent = pick.title;
+    if (title) {
+      title.textContent = pick.title;
+      tipIfClamped(title);
+    }
     var tagline = card.querySelector(".home-random-tagline");
     if (tagline) {
       if (pick.tagline) {
@@ -356,6 +387,7 @@ export default ((opts: Options) => {
       } else {
         tagline.style.display = "none";
       }
+      tipIfClamped(tagline);
     }
     var meta = card.querySelector(".home-meta");
     if (meta) {
@@ -382,6 +414,18 @@ export default ((opts: Options) => {
   }
 
   function init() {
+    var stamps = document.querySelectorAll("[data-rel-date]");
+    for (var i = 0; i < stamps.length; i++) {
+      var r = rel(stamps[i].getAttribute("data-rel-date"));
+      if (r) {
+        if (!stamps[i].hasAttribute("title")) stamps[i].setAttribute("title", stamps[i].textContent);
+        stamps[i].textContent = r;
+      }
+    }
+    var trunc = document.querySelectorAll(
+      ".home-recent-title, .home-recent-tagline, .home-random-title, .home-random-tagline",
+    );
+    for (var j = 0; j < trunc.length; j++) tipIfClamped(trunc[j]);
     var root = document.getElementById("home-random");
     if (!root) return;
     var pool = [];

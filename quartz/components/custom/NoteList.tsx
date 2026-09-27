@@ -8,6 +8,7 @@ const DEFAULT_PAGE_SIZE = 20
 
 export interface RawFrontmatter {
   title?: string
+  tagline?: string
   score?: number
   category?: string
   modified?: string
@@ -66,7 +67,11 @@ export function buildPageItem(p: QuartzPluginData, fromSlug: string) {
 const FILTER_TAGS = ["review", "note", "log"]
 
 export default ((_userOpts?: never) => {
-  const NoteList: QuartzComponent = ({ allFiles, fileData, displayClass }: QuartzComponentProps) => {
+  const NoteList: QuartzComponent = ({
+    allFiles,
+    fileData,
+    displayClass,
+  }: QuartzComponentProps) => {
     const originalSlug = fileData.slug!
 
     if (!originalSlug.endsWith("/index") && originalSlug !== "index") return null
@@ -97,8 +102,14 @@ export default ((_userOpts?: never) => {
         )
       })
       .sort((a, b) => {
-        const dateA = (a.frontmatter as RawFrontmatter)?.modified ?? (a.frontmatter as RawFrontmatter)?.created ?? ""
-        const dateB = (b.frontmatter as RawFrontmatter)?.modified ?? (b.frontmatter as RawFrontmatter)?.created ?? ""
+        const dateA =
+          (a.frontmatter as RawFrontmatter)?.modified ??
+          (a.frontmatter as RawFrontmatter)?.created ??
+          ""
+        const dateB =
+          (b.frontmatter as RawFrontmatter)?.modified ??
+          (b.frontmatter as RawFrontmatter)?.created ??
+          ""
         return dateB.localeCompare(dateA)
       }) as QuartzPluginData[]
 
@@ -123,8 +134,11 @@ export default ((_userOpts?: never) => {
           <span class="note-list-count" id="note-list-count"></span>
           <div class="note-list-header-right">
             <div class="note-list-filters" id="note-list-filters"></div>
-            <label class="note-list-log-toggle" id="note-list-log-toggle"
-              title="Short informal notes, hidden by default">
+            <label
+              class="note-list-log-toggle"
+              id="note-list-log-toggle"
+              title="Short informal notes, hidden by default"
+            >
               <input type="checkbox" id="note-list-log-switch" />
               <span class="note-list-log-toggle-track">
                 <span class="note-list-log-toggle-thumb"></span>
