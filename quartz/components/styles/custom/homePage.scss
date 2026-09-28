@@ -110,7 +110,7 @@
 
   & > img {
     width: 100%;
-    aspect-ratio: 9 / 5;
+    height: 130px;
     object-fit: cover;
     display: block;
   }
@@ -217,7 +217,7 @@
 .home-random-art {
   display: block;
   width: 260px;
-  height: 120px;
+  height: 140px;
   flex-shrink: 0;
   overflow: hidden;
   border-radius: 5px 0 0 5px;
@@ -241,6 +241,14 @@
       max-height: 120px;
     }
   }
+}
+
+.home-random-art > img {
+  transition: opacity 0.3s ease;
+}
+
+.home-random-art[data-loading] > img {
+  opacity: 0;
 }
 
 .home-random-body {

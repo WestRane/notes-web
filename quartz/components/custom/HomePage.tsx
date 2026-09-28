@@ -3,7 +3,7 @@ import { resolveRelative, FullSlug } from "../../util/path"
 import { QuartzPluginData } from "../../plugins/vfile"
 import style from ".././styles/custom/homePage.scss"
 import { buildPageItem, RawFrontmatter } from "./NoteList"
-import anilistData from "../../static/data/anilist.json"
+import { reviewBannerUrl, reviewPosterUrl } from "./reviewAssets"
 
 interface Options {
   intro?: string
@@ -36,35 +36,12 @@ function sortByDateDesc(a: QuartzPluginData, b: QuartzPluginData): number {
 
 function resolveCover(p: QuartzPluginData): string | null {
   const fm = p.frontmatter as FrontmatterWithIds | undefined
-  const ids = fm?.ids
-  if (!ids) return null
-  if (fm?.category === "books") {
-    if (ids.openlibrary) return `https://covers.openlibrary.org/b/olid/${ids.openlibrary}-L.jpg`
-    if (ids.isbn) return `https://covers.openlibrary.org/b/isbn/${ids.isbn}-L.jpg`
-    return null
-  }
-  if (ids.anilist) {
-    const entry = (anilistData as Record<string, { cover?: string }>)[String(ids.anilist)]
-    if (entry?.cover) return entry.cover
-  }
-  return null
+  return reviewPosterUrl(fm?.category, fm?.ids)
 }
 
 function resolveBanner(p: QuartzPluginData): string | null {
   const fm = p.frontmatter as FrontmatterWithIds | undefined
-  const ids = fm?.ids
-  if (!ids) return null
-  if (ids.anilist) {
-    const entry = (anilistData as Record<string, { banner?: string }>)[String(ids.anilist)]
-    if (entry?.banner) return entry.banner
-  }
-  if (ids.steam) {
-    return `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${ids.steam}/library_hero.jpg`
-  }
-  if (ids.imdb) {
-    return `https://images.metahub.space/background/medium/${ids.imdb}/img`
-  }
-  return null
+  return reviewBannerUrl(fm?.category, fm?.ids)
 }
 
 export default ((opts: Options) => {
@@ -289,8 +266,11 @@ export default ((opts: Options) => {
               </div>
               <a href={randomData.fallback.href} class="home-random-card">
                 {randomData.fallback.cover && (
-                  <span class="home-random-art">
+                  <span class="home-random-art" data-loading="">
                     <img src={randomData.fallback.cover} alt="" loading="lazy" />
+                    <noscript>
+                      <style>{".home-random-art[data-loading]>img{opacity:1}"}</style>
+                    </noscript>
                   </span>
                 )}
                 <span class="home-random-body">
@@ -352,10 +332,35 @@ export default ((opts: Options) => {
     if (!card || !pick) return;
     card.setAttribute("href", pick.href);
     var art = card.querySelector(".home-random-art");
-    var img = card.querySelector(".home-random-art img");
+    if (pick.cover && !art) {
+      art = document.createElement("span");
+      art.className = "home-random-art";
+      art.setAttribute("data-loading", "");
+      card.prepend(art);
+    }
+    var img = art ? art.querySelector("img") : null;
+    if (pick.cover && !img) {
+      img = document.createElement("img");
+      img.alt = "";
+      img.setAttribute("loading", "lazy");
+      art.appendChild(img);
+    }
     if (pick.cover) {
-      if (art) art.style.display = "";
-      if (img) img.setAttribute("src", pick.cover);
+      // Preload before swapping so the card never flashes a half-loaded image.
+      var finalImg = img;
+      var finalArt = art;
+      var shown = false;
+      var show = function () {
+        if (shown) return;
+        shown = true;
+        finalImg.setAttribute("src", pick.cover);
+        finalArt.removeAttribute("data-loading");
+      };
+      var pre = new Image();
+      pre.onload = show;
+      pre.onerror = show;
+      pre.src = pick.cover;
+      setTimeout(show, 3000);
     } else if (art) {
       art.style.display = "none";
     }
@@ -427,15 +432,21 @@ export default ((opts: Options) => {
     );
     for (var j = 0; j < trunc.length; j++) tipIfClamped(trunc[j]);
     var root = document.getElementById("home-random");
-    if (!root) return;
-    var pool = [];
-    try {
-      pool = JSON.parse(root.dataset.pool || "[]");
-    } catch (e) {
-      return;
+    if (root && !root.dataset.randomized) {
+      root.dataset.randomized = "1";
+      var pool = [];
+      try {
+        pool = JSON.parse(root.dataset.pool || "[]");
+      } catch (e) {
+        pool = [];
+      }
+      if (pool.length) {
+        render(root, pool[Math.floor(Math.random() * pool.length)]);
+      } else {
+        var stale = root.querySelector(".home-random-art");
+        if (stale) stale.removeAttribute("data-loading");
+      }
     }
-    if (!pool.length) return;
-    render(root, pool[Math.floor(Math.random() * pool.length)]);
   }
 
   document.addEventListener("nav", init);

@@ -127,3 +127,14 @@
 .book-hero.gated::after {
   opacity: 0;
 }
+
+.banner-credit {
+  margin-top: 0.25rem;
+  text-align: right;
+  font-size: 0.75rem;
+  color: var(--gray);
+
+  a {
+    color: inherit;
+  }
+}

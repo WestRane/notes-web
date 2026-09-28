@@ -5,22 +5,11 @@ on:
     branches:
       - v4
   repository_dispatch:
-      types: [content-updated]      
+    types: [content-updated]
   workflow_dispatch:
-    inputs:
-      force:
-        description: "Force refetch all AniList data"
-        type: boolean
-        default: false
-      ids:
-        description: "Specific AniList IDs to refetch (space-separated)"
-        type: string
-        default: ""
-  schedule:
-    - cron: '0 0 1 * *'  # Runs automatically on the 1st of every month at midnight
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -36,15 +25,21 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
+      # No-history cloning on purpose
       - name: Checkout notes-web
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Clone notes-content
         run: |
           rm -rf content
-          git clone https://github.com/WestRane/notes-content.git content
+          git clone --depth 1 https://github.com/WestRane/notes-content.git content
+
+      - name: Checkout notes-assets
+        uses: actions/checkout@v6
+        with:
+          repository: WestRane/notes-assets
+          token: ${{ secrets.ASSETS_REPO_PAT }}
+          path: assets
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -60,26 +55,25 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Fetch AniList data
-        run: |
-          ARGS=""
-          if [ "${{ inputs.force }}" = "true" ]; then
-            ARGS="--force"
-          fi
-          if [ -n "${{ inputs.ids }}" ]; then
-            ARGS="$ARGS ${{ inputs.ids }}"
-          fi
-          # Check for broken links if run by schedule
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            ARGS="$ARGS --check"
-          fi
-          node ./scripts/fetch-anilist.mjs $ARGS
+      - name: Sync banners and posters
+        env:
+          ASSETS_DIR: assets
+        run: node ./scripts/sync-assets.mjs
 
-      - name: Commit AniList data cache
+      # Non-fatal on purpose
+      - name: Commit and push asset changes
+        continue-on-error: true
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
-          commit_message: "chore: update anilist data cache [skip ci]"
-          file_pattern: 'quartz/static/data/anilist.json'          
+          repository: assets
+          commit_message: "chore(assets): sync banners and posters"
+          file_pattern: "images manifest.json"
+
+      - name: Copy images into Quartz static
+        run: |
+          mkdir -p quartz/static/assets/images
+          if [ -d assets/images ]; then cp -r assets/images/. quartz/static/assets/images/; fi
+          if [ -f assets/manifest.json ]; then cp assets/manifest.json quartz/static/assets/manifest.json; fi
 
       - name: Build Quartz
         run: node ./quartz/bootstrap-cli.mjs build
