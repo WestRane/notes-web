@@ -1,0 +1,101 @@
+// Shared badge language — single source of truth for review badges.
+// @use'd by both noteList.scss and homePage.scss. Quartz bundles component CSS
+// globally, but each page only gets the CSS of components it renders, so a
+// shared partial (not a shared global class in one component's file) is what
+// keeps both pages in sync. Change a design ONCE here.
+.rv-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 2px 8px;
+  font-size: 12px;
+  line-height: 1;
+  border-radius: 20px;
+  color: var(--darkgray);
+  background: rgba(128, 128, 128, 0.08);
+  border: 1px solid var(--lightgray);
+  white-space: nowrap;
+}
+
+// Shared score language: status-colored numeral + muted /10 (ScoreBlock
+// typography, miniaturized). Geometry is per placement: corner-mute strip on
+// art (.note-list-card-art .rv-score), plain inline in meta rows
+// (.home-meta > .rv-score). Markup everywhere:
+//   <span class="rv-score good"><b>9</b><small>/10</small></span>
+.rv-score {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+
+  > b {
+    font-weight: 800;
+  }
+
+  > small {
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: 3px;
+    color: #9a9a9e;
+  }
+
+  &.good > b {
+    color: #8dc63f;
+  }
+  &.okay > b {
+    color: #e8a020;
+  }
+  &.bad > b {
+    color: #e74c3c;
+  }
+}
+
+// Pills-on-art (top-right corner): frosted dark-glass chips, readable on any
+// artwork. Markup: <span class="rv-chips"><span class="rv-chip">…</span></span>
+.rv-chips {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  z-index: 1;
+  display: flex;
+  gap: 2px;
+}
+
+.rv-chip {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  border-radius: 20px;
+  white-space: nowrap;
+  color: #f0f0f0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+// Score-on-art strip: 26px/600 numeral on a full-bleed linear fade + halo.
+// Include wherever a score sits on artwork; the host needs
+// position:relative + overflow:hidden.
+@mixin rv-score-strip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 26px 8px 8px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.45) 42%, rgba(0, 0, 0, 0.89) 100%);
+
+  > b {
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9);
+  }
+
+  > small {
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+  }
+}

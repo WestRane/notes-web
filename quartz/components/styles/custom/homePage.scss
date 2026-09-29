@@ -1,4 +1,5 @@
 @use "../../../styles/variables.scss" as *;
+@use "./badges" as *;
 
 .home-intro {
   font-size: 16px;
@@ -62,22 +63,6 @@
   }
 }
 
-.home-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  height: 18px;
-  margin-bottom: 1px;
-  padding: 0 7px;
-  font-size: 12px;
-  border-radius: 20px;
-  color: var(--darkgray);
-  background: rgba(128, 128, 128, 0.08);
-  border: 1px solid var(--lightgray);
-  white-space: nowrap;
-}
-
 .home-recent {
   display: grid;
   grid-auto-flow: column;
@@ -104,6 +89,7 @@
 
 .home-recent-art {
   display: block;
+  position: relative;
   overflow: hidden;
   flex-shrink: 0;
   background: transparent;
@@ -114,13 +100,17 @@
     object-fit: cover;
     display: block;
   }
+
+  .rv-score {
+    @include rv-score-strip;
+  }
 }
 
 .home-recent-body {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 8px 10px 10px;
+  padding: 8px 10px 6px;
   flex: 1;
   min-width: 0;
 }
@@ -150,8 +140,8 @@
   font-weight: 400;
   color: var(--darkgray);
   opacity: 0.6;
-  line-height: 1.4;
-  min-height: calc(1.4em * 2);
+  line-height: 1.25;
+  min-height: calc(1.25em * 2);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -167,8 +157,12 @@
   padding-top: 6px;
 }
 
-.home-meta .note-list-badge {
+.home-meta > .rv-score {
   margin-right: 4px;
+
+  > b {
+    font-size: 14px;
+  }
 }
 
 .home-group-heading {
@@ -216,12 +210,17 @@
 
 .home-random-art {
   display: block;
+  position: relative;
   width: 260px;
-  height: 140px;
+  height: 130px;
   flex-shrink: 0;
   overflow: hidden;
   border-radius: 5px 0 0 5px;
   background: transparent;
+
+  .rv-score {
+    @include rv-score-strip;
+  }
 
   & > img {
     width: 100%;
@@ -366,7 +365,7 @@
   font-weight: 400;
   color: var(--darkgray);
   opacity: 0.6;
-  line-height: 1.4;
+  line-height: 1.25;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;

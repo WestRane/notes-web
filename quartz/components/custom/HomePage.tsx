@@ -2,7 +2,7 @@ import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } fro
 import { resolveRelative, FullSlug } from "../../util/path"
 import { QuartzPluginData } from "../../plugins/vfile"
 import style from ".././styles/custom/homePage.scss"
-import { buildPageItem, RawFrontmatter } from "./NoteList"
+import { buildPageItem, RawFrontmatter, REVIEW_CATEGORIES } from "./NoteList"
 import { reviewBannerUrl, reviewPosterUrl } from "./reviewAssets"
 
 interface Options {
@@ -19,7 +19,7 @@ interface Options {
 
 type FrontmatterWithIds = RawFrontmatter & { ids?: Record<string, string | number> }
 
-const CATEGORY_ORDER = ["anime", "manga", "ranobe", "games", "series", "books", "movies"]
+const CATEGORY_ORDER = REVIEW_CATEGORIES
 
 function isReviewPage(p: QuartzPluginData): boolean {
   return !!p.slug && p.slug.startsWith("reviews/") && !p.slug.endsWith("/index")
@@ -230,6 +230,18 @@ export default ((opts: Options) => {
                     {cover && (
                       <span class="home-recent-art">
                         <img src={cover} alt="" loading="lazy" />
+                        {item.score !== undefined && item.status && (
+                          <span class={`rv-score ${item.status}`}>
+                            <b>{item.score}</b>
+                            <small>/10</small>
+                          </span>
+                        )}
+                        {(item.category || item.locale) && (
+                          <span class="rv-chips">
+                            {item.category && <span class="rv-chip">{item.category}</span>}
+                            {item.locale && <span class="rv-chip">{item.locale}</span>}
+                          </span>
+                        )}
                       </span>
                     )}
                     <span class="home-recent-body">
@@ -247,11 +259,14 @@ export default ((opts: Options) => {
                         </span>
                       )}
                       <span class="home-meta">
-                        {item.score !== undefined && item.status && (
-                          <span class={`note-list-badge ${item.status}`}>{item.score}</span>
+                        {!cover && item.score !== undefined && item.status && (
+                          <span class={`rv-score ${item.status}`}>
+                            <b>{item.score}</b>
+                            <small>/10</small>
+                          </span>
                         )}
-                        {item.category && <span class="home-badge">{item.category}</span>}
-                        {item.locale && <span class="home-badge">{item.locale}</span>}
+                        {!cover && item.category && <span class="rv-pill">{item.category}</span>}
+                        {!cover && item.locale && <span class="rv-pill">{item.locale}</span>}
                       </span>
                     </span>
                   </a>
@@ -268,6 +283,22 @@ export default ((opts: Options) => {
                 {randomData.fallback.cover && (
                   <span class="home-random-art" data-loading="">
                     <img src={randomData.fallback.cover} alt="" loading="lazy" />
+                    {randomData.fallback.score !== undefined && randomData.fallback.status && (
+                      <span class={`rv-score ${randomData.fallback.status}`}>
+                        <b>{randomData.fallback.score}</b>
+                        <small>/10</small>
+                      </span>
+                    )}
+                    {(randomData.fallback.category || randomData.fallback.locale) && (
+                      <span class="rv-chips">
+                        {randomData.fallback.category && (
+                          <span class="rv-chip">{randomData.fallback.category}</span>
+                        )}
+                        {randomData.fallback.locale && (
+                          <span class="rv-chip">{randomData.fallback.locale}</span>
+                        )}
+                      </span>
+                    )}
                     <noscript>
                       <style>{".home-random-art[data-loading]>img{opacity:1}"}</style>
                     </noscript>
@@ -286,16 +317,19 @@ export default ((opts: Options) => {
                     </span>
                   )}
                   <span class="home-meta">
-                    {randomData.fallback.score !== undefined && randomData.fallback.status && (
-                      <span class={`note-list-badge ${randomData.fallback.status}`}>
-                        {randomData.fallback.score}
-                      </span>
+                    {!randomData.fallback.cover &&
+                      randomData.fallback.score !== undefined &&
+                      randomData.fallback.status && (
+                        <span class={`rv-score ${randomData.fallback.status}`}>
+                          <b>{randomData.fallback.score}</b>
+                          <small>/10</small>
+                        </span>
+                      )}
+                    {!randomData.fallback.cover && randomData.fallback.category && (
+                      <span class="rv-pill">{randomData.fallback.category}</span>
                     )}
-                    {randomData.fallback.category && (
-                      <span class="home-badge">{randomData.fallback.category}</span>
-                    )}
-                    {randomData.fallback.locale && (
-                      <span class="home-badge">{randomData.fallback.locale}</span>
+                    {!randomData.fallback.cover && randomData.fallback.locale && (
+                      <span class="rv-pill">{randomData.fallback.locale}</span>
                     )}
                   </span>
                 </span>
@@ -346,6 +380,7 @@ export default ((opts: Options) => {
       art.appendChild(img);
     }
     if (pick.cover) {
+      if (art) art.style.display = "";
       // Preload before swapping so the card never flashes a half-loaded image.
       var finalImg = img;
       var finalArt = art;
@@ -397,21 +432,46 @@ export default ((opts: Options) => {
     var meta = card.querySelector(".home-meta");
     if (meta) {
       meta.innerHTML = "";
+      var artBadges = art ? art.querySelectorAll(".rv-score,.rv-chips") : [];
+      for (var bi = 0; bi < artBadges.length; bi++) artBadges[bi].remove();
+      var host = pick.cover && art ? art : meta;
       if (pick.score !== undefined && pick.status) {
         var badge = document.createElement("span");
-        badge.className = "note-list-badge " + pick.status;
-        badge.textContent = pick.score;
-        meta.appendChild(badge);
+        badge.className = "rv-score " + pick.status;
+        var num = document.createElement("b");
+        num.textContent = pick.score;
+        badge.appendChild(num);
+        var max = document.createElement("small");
+        max.textContent = "/10";
+        badge.appendChild(max);
+        host.appendChild(badge);
       }
-      if (pick.category) {
+      if (pick.cover && art && (pick.category || pick.locale)) {
+        var chips = document.createElement("span");
+        chips.className = "rv-chips";
+        if (pick.category) {
+          var ccat = document.createElement("span");
+          ccat.className = "rv-chip";
+          ccat.textContent = pick.category;
+          chips.appendChild(ccat);
+        }
+        if (pick.locale) {
+          var clang = document.createElement("span");
+          clang.className = "rv-chip";
+          clang.textContent = pick.locale;
+          chips.appendChild(clang);
+        }
+        art.appendChild(chips);
+      }
+      if (!pick.cover && pick.category) {
         var cat = document.createElement("span");
-        cat.className = "home-badge";
+        cat.className = "rv-pill";
         cat.textContent = pick.category;
         meta.appendChild(cat);
       }
-      if (pick.locale) {
+      if (!pick.cover && pick.locale) {
         var lang = document.createElement("span");
-        lang.className = "home-badge";
+        lang.className = "rv-pill";
         lang.textContent = pick.locale;
         meta.appendChild(lang);
       }
